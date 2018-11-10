@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Matrix.Xmpp;
 using System.Threading.Tasks;
 
 namespace Jabber
@@ -18,7 +19,10 @@ namespace Jabber
         {
             var who = msg.From;
 
-            await JabberClient.Instance.SendMessage(who.Bare, "Hello cruel world!");
+            if (msg.Type == MessageType.GroupChat)
+                await JabberClient.Instance.SendGroupMessage(who.Bare, "Hello Cruel World!");
+            else
+                await JabberClient.Instance.SendMessage(who.Bare, "Hello Cruel World!");
         }
     }
 }

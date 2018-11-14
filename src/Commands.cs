@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ESIClient.Dotcore.Api;
 using ESIClient.Dotcore.Client;
 using ESIClient.Dotcore.Model;
+using Matrix;
 
 namespace Jabber
 {
@@ -17,13 +18,13 @@ namespace Jabber
         {
             CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
+            CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
         }
 
-        public static async Task HelloWorld(Message msg)
+        public static async Task HelloWorld(Command cmd)
         {
-            var who = msg.From;
+            var who = cmd.XmppMessage.From;
 
-            string tmpMessage = jabber.RedisHelper.GetData("ship");
             var apiInstance = new IncursionsApi();
 
             try
@@ -38,24 +39,70 @@ namespace Jabber
 
 
 
-            if (msg.Type == MessageType.GroupChat)
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
                 await JabberClient.Instance.SendGroupMessage(who.Bare, "Hello Cruel World!");
             else
                 await JabberClient.Instance.SendMessage(who.Bare, "Hello Cruel World!");
         }
 
-        public static async Task GetInstructions(Message msg)
+        public static async Task GetInstructions(Command cmd)
         {
-            var who = msg.From;
-            Instruction tmpInstruction = new Instruction("This is our instructions", "samuel_the_terrible");
+            var who = cmd.XmppMessage.From;
 
-            if (msg.Type == MessageType.GroupChat)
+            Instructions instructions = Instructions.Get();
+
+            string reply = "No instructions set!";
+
+            if(instructions != null)
             {
-                await JabberClient.Instance.SendGroupMessage(who.Bare, tmpInstruction.ToString());
+                reply = instructions.ToString();
+            }
+
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
+            {
+                // Lets get their jid
+                Jid directJid = JabberClient.Instance.GetJidForResource(who?.Resource);
+
+                if(directJid == null)
+                {
+                    Console.WriteLine("[Error] Can't reverse Resource to Jid. Resource: \"{0}\"", who?.Resource);
+                    return;
+                }
+
+                await JabberClient.Instance.SendMessage(directJid, reply);
             } 
             else
             {
-                await JabberClient.Instance.SendMessage(who.Bare, tmpInstruction.ToString());
+                await JabberClient.Instance.SendMessage(who.Bare, reply);
+            }
+        }
+
+        public static async Task SetInstructions(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            Instructions instructions = new Instructions()
+            {
+                Text = cmd.Args,
+                SetAt = DateTime.UtcNow,
+                SetBy = author
+            };
+
+            instructions.Set();
+
+            if(cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, "Instructions set!");
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, "Instructions set!");
             }
         }
     }

@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using Matrix;
 using Matrix.Srv;
 using Matrix.Xmpp;
@@ -34,6 +36,8 @@ namespace Jabber
 
         public delegate void VoidDelegate();
         public event VoidDelegate OnJabberConnected;
+
+        private Dictionary<string, JabberRoom> m_rooms = new Dictionary<string, JabberRoom>(StringComparer.OrdinalIgnoreCase);
 
         public JabberClient()
         {
@@ -80,6 +84,8 @@ namespace Jabber
                 .Subscribe(el =>
                 {
                     // Unsure if we need to do something here
+                    Console.WriteLine(el);
+                    TrackPresenceForRooms(el as Presence);
                 });
 
             m_client
@@ -93,9 +99,27 @@ namespace Jabber
                     if (string.IsNullOrEmpty(msg.Body))
                         return;
 
-                    var command = msg.Body.Trim();
+                    var trimmed = msg.Body.Trim();
 
-                    CommandDispatcher.Instance.Enqueue(command, msg);
+                    var split = trimmed.Split(" ");
+                    var command = split[0];
+                    var args = "";
+
+                    // Do we have any arguments?
+                    if(split.Length > 1)
+                    {
+                        var withoutCmd = split.Skip(1).ToArray();
+                        args = string.Join(" ", withoutCmd);
+                    }
+
+                    Command cmd = new Command()
+                    {
+                        Cmd = command,
+                        Args = args,
+                        XmppMessage = msg
+                    };
+
+                    CommandDispatcher.Instance.Enqueue(command, cmd);
 
                     Console.WriteLine("[Info] Message: {0}", el.ToString());
                 });
@@ -154,20 +178,26 @@ namespace Jabber
             x.History.MaxStanzas = 0;
             p.Add(x);
 
-            Console.WriteLine(p.ToString());
+            AddRoom(to.User);
 
             await m_client.SendAsync(p);
 
+
             Console.WriteLine("[Info] Joined room {0}", roomJid);
+        }
+
+        public async Task SendMessage(Jid to, string message)
+        {
+            Message msg = new Message(to, message);
+
+            await m_client.SendAsync<Message>(msg);
         }
 
         public async Task SendMessage(string jid, string message)
         {
             Jid to = new Jid(jid);
 
-            Message msg = new Message(to, message);
-
-            await m_client.SendAsync<Message>(msg);
+            await SendMessage(to, message);
         }
         
         public async Task SendGroupMessage(string jid, string message)
@@ -177,6 +207,44 @@ namespace Jabber
             Message msg = new Message(to, MessageType.GroupChat, message);
 
             await m_client.SendAsync<Message>(msg);
+        }
+
+        public Jid GetJidForResource(string resource)
+        {
+            foreach (var kvp in m_rooms)
+            {
+                Jid foundJid = kvp.Value.GetJidForResource(resource);
+                if(foundJid != null)
+                {
+                    return foundJid;
+                }
+            }
+
+            return null;
+        }
+
+        private void TrackPresenceForRooms(Presence p)
+        {
+            foreach(var kvp in m_rooms)
+            {
+                if(kvp.Key == p.From.User)
+                {
+                    kvp.Value.AddUser(p);
+                }
+            }
+        }
+
+        private void AddRoom(string jid)
+        {
+            JabberRoom existing;
+            if(!m_rooms.TryGetValue(jid, out existing))
+            {
+                existing = new JabberRoom()
+                {
+                    Jid = jid
+                };
+                m_rooms[jid] = existing;
+            }
         }
     }
 }

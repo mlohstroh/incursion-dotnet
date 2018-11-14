@@ -8,16 +8,20 @@ using System.Threading.Tasks;
 namespace Jabber
 {
     /// <summary>
+    /// A command class for enqueuing into the dispatcher
+    /// </summary>
+    public class Command
+    {
+        public string Cmd { get; set; }
+        public string Args { get; set; }
+        public Message XmppMessage { get; set; }
+    }
+
+    /// <summary>
     /// A queued command dispatcher 
     /// </summary>
     public class CommandDispatcher
-    {
-        private class CommandPacket
-        {
-            public string Command { get; set; }
-            public Message XmppMessage { get; set; }
-        }
-
+    { 
         // Singleton Pattern, quick and simple
         private static object s_lockObject = new object();
         private static CommandDispatcher s_commandDispatcher = null;
@@ -37,16 +41,20 @@ namespace Jabber
             }
         }
 
-        private Dictionary<string, Func<Message, Task>> m_commands = new Dictionary<string, Func<Message, Task>>();
+        private Dictionary<string, Func<Command, Task>> m_commands = new Dictionary<string, Func<Command, Task>>();
         // Note: This is a bit overkill for one function, but still good practice and it's very negligible on performance.
-        private BlockingCollection<CommandPacket> m_commandQueue = new BlockingCollection<CommandPacket>(new ConcurrentQueue<CommandPacket>());
+        private BlockingCollection<Command> m_commandQueue = new BlockingCollection<Command>(new ConcurrentQueue<Command>());
 
+        /// <summary>
+        /// Detects if the command is registered
+        /// </summary>
+        /// <param name="command">Name of the command</param>
         public bool IsCommandRegistered(string command)
         {
             return m_commands.ContainsKey(command);
         }
 
-        public void RegisterCommand(string command, Func<Message, Task> func)
+        public void RegisterCommand(string command, Func<Command, Task> func)
         {
             if(IsCommandRegistered(command))
             {
@@ -57,15 +65,9 @@ namespace Jabber
             m_commands.Add(command, func);
         }
 
-        public void Enqueue(string command, Message msg)
+        public void Enqueue(string command, Command cmd)
         {
-            CommandPacket packet = new CommandPacket()
-            {
-                Command = command,
-                XmppMessage = msg
-            };
-
-            m_commandQueue.Add(packet);
+            m_commandQueue.Add(cmd);
         }
 
         public async Task ProcessQueue()
@@ -73,18 +75,18 @@ namespace Jabber
             while(true)
             {
                 // Block until a packet is enqueued
-                CommandPacket packet = m_commandQueue.Take();
+                Command cmd = m_commandQueue.Take();
 
                 // Sanity check
-                if(packet == null)
+                if(cmd == null)
                 {
                     continue;
                 }
 
-                Func<Message, Task> func = null;
-                if(m_commands.TryGetValue(packet.Command, out func))
+                Func<Command, Task> func = null;
+                if(m_commands.TryGetValue(cmd.Cmd, out func))
                 {
-                    await func(packet.XmppMessage);
+                    await func(cmd);
                 }
             }
         }

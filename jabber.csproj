@@ -6,9 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ESIClient.Dotcore" Version="1.0.6" />
     <PackageReference Include="Matrix.vNext" Version="2.0.3" />
     <PackageReference Include="Matrix.vNext.Extensions" Version="2.0.3" />
     <PackageReference Include="Matrix.vNext.Srv" Version="2.0.3" />
+    <PackageReference Include="StackExchange.Redis" Version="2.0.513" />
   </ItemGroup>
 
   <ItemGroup>

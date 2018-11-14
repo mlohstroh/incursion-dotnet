@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Text;
 using Matrix.Xmpp;
 using System.Threading.Tasks;
+using ESIClient.Dotcore.Api;
+using ESIClient.Dotcore.Client;
+using ESIClient.Dotcore.Model;
 
 namespace Jabber
 {
@@ -19,6 +22,21 @@ namespace Jabber
         public static async Task HelloWorld(Message msg)
         {
             var who = msg.From;
+
+            string tmpMessage = jabber.RedisHelper.GetData("ship");
+            var apiInstance = new IncursionsApi();
+
+            try
+            {
+                var tmp = apiInstance.GetIncursions();
+                Console.WriteLine(tmp[0]);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception hen calling IncursionsApi.GetInstance: " + e.Message);
+            }
+
+
 
             if (msg.Type == MessageType.GroupChat)
                 await JabberClient.Instance.SendGroupMessage(who.Bare, "Hello Cruel World!");

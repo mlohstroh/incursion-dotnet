@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using Matrix.Xmpp;
 using System.Threading.Tasks;
-using ESIClient.Dotcore.Api;
-using ESIClient.Dotcore.Client;
-using ESIClient.Dotcore.Model;
 using Matrix;
+using ESI.NET.Models.Incursions;
 
 namespace Jabber
 {
@@ -19,25 +17,12 @@ namespace Jabber
             CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
+            CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
         }
 
         public static async Task HelloWorld(Command cmd)
         {
             var who = cmd.XmppMessage.From;
-
-            var apiInstance = new IncursionsApi();
-
-            try
-            {
-                var tmp = apiInstance.GetIncursions();
-                Console.WriteLine(tmp[0]);
-            }
-            catch(Exception e)
-            {
-                Console.WriteLine("Exception hen calling IncursionsApi.GetInstance: " + e.Message);
-            }
-
-
 
             if (cmd.XmppMessage.Type == MessageType.GroupChat)
                 await JabberClient.Instance.SendGroupMessage(who.Bare, "Hello Cruel World!");
@@ -103,6 +88,36 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(jid.Bare, "Instructions set!");
+            }
+        }
+
+        public static async Task GetIncursions(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            List<Incursion> incursions = await EsiWrapper.GetIncursions();
+
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine();
+
+            foreach(var incursion in incursions)
+            {
+                builder.AppendLine(await incursion.GetDefaultIncursionMessage());
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, builder.ToString());
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, builder.ToString());
             }
         }
     }

@@ -29,7 +29,7 @@ namespace Jabber
                 {
                     IOptions<EsiConfig> options = Options.Create<EsiConfig>(new EsiConfig()
                     {
-                        EsiUrl = "https://esi.tech.ccp.is/",
+                        EsiUrl = "https://esi.evetech.net/",
                         DataSource = DataSource.Tranquility,
                         UserAgent = "goons-incursion-jabber-bot"
                     });

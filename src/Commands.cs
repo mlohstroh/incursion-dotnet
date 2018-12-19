@@ -14,7 +14,7 @@ namespace Jabber
     {
         public static void Register()
         {
-            CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
+            //CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);

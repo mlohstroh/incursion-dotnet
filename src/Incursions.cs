@@ -37,8 +37,7 @@ namespace Jabber
                 systemStatus = (float)system.SecurityStatus;
             }
 
-            // Example String: Arodan {0.3} {Armi - Domain} Influence: 100% - Status mobilizing- 40 jumps from staging - Dotlan: http://evemaps.dotlan.net/map/Domain/Armi
-            return string.Format("{0:F1} {{{1} - {2}}} Influence: {3}% - Status {4} - {5} estimated jumps from staging - Dotlan {6}", systemStatus, constellation.Name, regionName, incursion.Influence * 100, incursion.State, jumpCount, dotlan);
+            return string.Format("{0:F1} ({1} - {2}) Influence: {3:F1}% - Status {4} - {5} estimated jumps from staging - {6}", systemStatus, constellation.Name, regionName, incursion.Influence * 100, incursion.State, jumpCount, dotlan);
         }
 
         public static async Task<string> GetRegionName(this Constellation constellation)

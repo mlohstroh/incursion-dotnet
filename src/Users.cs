@@ -1,64 +1,94 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace jabber.src
+
+namespace jabber
 {
+    /// <summary>
+    /// A collection of users with permission to use special commands
+    /// Owners can manage users.
+    /// </summary>
     class Users
     {
-        private static List<User> usersList;
+        private const string WaitlistRedisKey = "waitlist:users";
+        private Dictionary<string, User> usersList;
 
-        protected static List<User> UsersList { get => usersList; set => usersList = value; }
 
-        public static List<User> getAdmins()
+        public static Dictionary<string, User> Get()
         {
-            List<User> admins = new List<User>();
-            foreach (User user in UsersList)
-            {
-                if (user.Role == "Admin")
-                    admins.Add(user);
-            }
-
-            return admins;
+            return Jabber.RedisHelper.Get<Dictionary<string, User>>(WaitlistRedisKey);
         }
 
-        public static List<User> getManagers()
+        public void Set()
         {
-            List<User> managers = new List<User>();
-            foreach (User user in UsersList)
-            {
-                if (user.Role == "Manager")
-                    managers.Add(user);
-            }
-
-            return managers;
+            Jabber.RedisHelper.Set<Users>(WaitlistRedisKey, this);
         }
 
-
-        public static List<User> getUsers()
+        /// <summary>
+        /// Checks to see if a specific jabber resource has the permission to
+        /// complete a task.
+        /// </summary>
+        /// <param name="jabber_resource">Example: samuel_the_terrible</param>
+        /// <param name="requires_admin"></param>
+        /// <returns> Boolean indicating if the user has permission.</returns>
+        public bool CheckUser(string jabber_resource, bool requires_admin)
         {
-            return UsersList;
+            usersList = Users.Get();
+
+            if (usersList.ContainsKey(jabber_resource.Trim()))
+            {
+                if (requires_admin && usersList[jabber_resource].Role != "Admin")
+                {
+                    return false;
+                }
+
+                return true;   
+            }            
+
+            // User not found
+            return false;
+        }
+
+        /// <summary>
+        /// Adds a new user
+        /// </summary>
+        /// <param name="jabber_resource">Example: samuel_the_terrible</param>
+        /// <param name="is_admin"></param>
+        public void AddUser(string jabber_resource, bool is_admin)
+        {
+            try
+            {
+                usersList = Users.Get();
+            }
+            catch (Exception e)
+            {
+                Console.BackgroundColor = ConsoleColor.Red;
+                Console.WriteLine(e);
+                Console.Beep();
+                
+            }
+            
+
+            if(!usersList.ContainsKey(jabber_resource))
+            {
+                string role = (is_admin) ? "Admin" : "User";
+                usersList.Add(jabber_resource, new User(jabber_resource, role));
+            }
         }
     }
 
     internal class User
     {
-        private string id;
-        private string name;
+        private string jabber_resource;
         private string role;
-        private string type;
 
-        public User(string id, string name, string role, string type)
+        public User(string jabber_resource, string role)
         {
-            this.Id = id;
-            this.Name = name;
+            this.Jabber_resource = jabber_resource;
             this.Role = role;
-            this.Type = type;
         }
 
-        public string Id { get => id; set => id = value; }
-        public string Name { get => name; set => name = value; }
+        public string Jabber_resource { get => jabber_resource; set => jabber_resource = value; }
         public string Role { get => role; set => role = value; }
-        public string Type { get => type; set => type = value; }
     }
 }

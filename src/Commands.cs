@@ -6,6 +6,7 @@ using Matrix.Xmpp;
 using System.Threading.Tasks;
 using Matrix;
 using ESI.NET.Models.Incursions;
+using jabber;
 
 namespace Jabber
 {
@@ -17,7 +18,12 @@ namespace Jabber
             //CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
+
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
+
+            CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
+            //CommandDispatcher.Instance.RegisterCommand("!listusers", GetUsers);
+            //CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
         }
 
         public static async Task HelloWorld(Command cmd)
@@ -118,6 +124,53 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(jid.Bare, builder.ToString());
+            }
+        }
+
+        public static async Task SetUser(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if(cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            string[] parts = cmd.Args.Trim().Split(" ");
+            bool setAdmin = false;
+            string message = "setuser help:\nAdmins: !adduser target_jabber_name admin\nUsers: !adduser target_jabber_name";
+
+            if (parts.Length > 0)
+            {
+                if(!parts[0].Contains('@'))
+                {
+                    string new_user = parts[0];
+
+                    if (parts.Length > 1 && parts[1].ToLower() == "admin")
+                    {
+                        setAdmin = true;
+                    }
+
+                    new Users().AddUser(new_user, setAdmin);
+                    message = string.Format("{0} is now a whitelisted {1}",
+                        message,
+                        (setAdmin) ? "admin" : "user"
+                    );
+                }
+                else
+                {
+                    message = "Do not include @goonfleet.com in the targets username.";
+                }
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
             }
         }
     }

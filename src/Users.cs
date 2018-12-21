@@ -56,18 +56,13 @@ namespace jabber
         /// <param name="is_admin"></param>
         public void AddUser(string jabber_resource, bool is_admin)
         {
-            try
-            {
-                usersList = Users.Get();
-            }
-            catch (Exception e)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine(e);
-                Console.Beep();
-                
-            }
+
+            usersList = Users.Get();
             
+            if(usersList == null)
+            {
+                usersList = new Dictionary<string, User>();
+            }
 
             if(!usersList.ContainsKey(jabber_resource))
             {

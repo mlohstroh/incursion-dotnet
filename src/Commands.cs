@@ -139,7 +139,7 @@ namespace Jabber
 
             string[] parts = cmd.Args.Trim().Split(" ");
             bool setAdmin = false;
-            string message = "setuser help:\nAdmins: !adduser target_jabber_name admin\nUsers: !adduser target_jabber_name";
+            string message = "setuser help:\nAdmins: !adduser target_jabber_name --admin\nUsers: !adduser target_jabber_name";
 
             if (parts.Length > 0)
             {
@@ -147,14 +147,17 @@ namespace Jabber
                 {
                     string new_user = parts[0];
 
-                    if (parts.Length > 1 && parts[1].ToLower() == "admin")
+                    if (parts.Length > 1 && parts[1].ToLower() == "--admin")
                     {
                         setAdmin = true;
                     }
 
-                    new Users().AddUser(new_user, setAdmin);
+                    Users userClass = new Users();
+                    userClass.AddUser(new_user, setAdmin);
+                    userClass.Set();
+                    //new Users().AddUser(new_user, setAdmin);
                     message = string.Format("{0} is now a whitelisted {1}",
-                        message,
+                        new_user,
                         (setAdmin) ? "admin" : "user"
                     );
                 }

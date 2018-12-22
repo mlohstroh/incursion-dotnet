@@ -145,9 +145,9 @@ namespace Jabber
             {
                 string[] parts = cmd.Args.Trim().Split(" ");
                 bool setAdmin = false;
-                message = "setuser help:\nAdmins: !adduser target_jabber_name --admin\nUsers: !adduser target_jabber_name";
+                message = "Set user help:\nAdmins: !adduser target_jabber_name --admin\nUsers: !adduser target_jabber_name";
 
-                if (parts.Length > 0)
+                if (parts.Length > 0 && parts[0] != "")
                 {
                     if (!parts[0].Contains('@'))
                     {
@@ -158,13 +158,8 @@ namespace Jabber
                             setAdmin = true;
                         }
 
-                        userClass.AddUser(new_user, setAdmin);
+                        message = userClass.AddUser(new_user, setAdmin);
                         userClass.Set();
-
-                        message = string.Format("{0} is now a whitelisted {1}",
-                            new_user,
-                            (setAdmin) ? "admin" : "user"
-                        );
                     }
                     else
                     {
@@ -228,9 +223,9 @@ namespace Jabber
             if (userClass.CheckUser(author, true))
             {
                 string[] parts = cmd.Args.Trim().Split(" ");
-                message = "setuser help:\nAdmins: !removeuser target_jabber_name";
+                message = "Remove user help:\n!removeuser target_jabber_name";
 
-                if (parts.Length > 0 && !parts[0].Contains('@'))
+                if (parts.Length > 0 && parts[0] != "" && !parts[0].Contains('@'))
                 {
                     message = userClass.RemoveUser(parts[0]);
                     userClass.Set();

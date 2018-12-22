@@ -51,7 +51,7 @@ namespace jabber
 
             if (m_usersList.ContainsKey(jabber_resource.Trim()))
             {
-                if (requires_admin && m_usersList[jabber_resource].Role == "Admin");
+                if (requires_admin && m_usersList[jabber_resource].Role == "Admin")
                     return true;
             }            
 
@@ -77,7 +77,7 @@ namespace jabber
         /// </summary>
         /// <param name="jabber_resource">Example: samuel_the_terrible</param>
         /// <param name="is_admin"></param>
-        public void AddUser(string jabber_resource, bool is_admin)
+        public string AddUser(string jabber_resource, bool is_admin)
         {
             if(m_usersList == null)
             {
@@ -87,15 +87,19 @@ namespace jabber
             if(!m_usersList.ContainsKey(jabber_resource))
             {
                 string role = (is_admin) ? "Admin" : "User";
-                m_usersList.Add(jabber_resource, new User() {
+
+                User new_user = new User
+                {
                     JabberResource = jabber_resource,
                     Role = role
-                });
-            }
-            var u = new User()
+                };
+
+                m_usersList.Add(jabber_resource, new_user);
+                return string.Format("{0} has been added to the ACL with the role: {1}.", jabber_resource, role.ToLower());
+            } else
             {
-                JabberResource = "test"
-            };
+                return string.Format("{0} is already on the ACL as a {1}. If you wish to change their permission you must remove them first!", jabber_resource, m_usersList[jabber_resource].Role);
+            }
         }
 
         /// <summary>

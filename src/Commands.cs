@@ -22,6 +22,7 @@ namespace Jabber
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
 
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
+            CommandDispatcher.Instance.RegisterCommand("!test", TestIncursions);
 
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
             CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
@@ -123,6 +124,30 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(jid.Bare, builder.ToString());
+            }
+        }
+
+        public static async Task TestIncursions(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            
+            nIncursions incursionClass = nIncursions.Get();
+            incursionClass.Set();
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, incursionClass.CheckIncursions());
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, incursionClass.CheckIncursions());
             }
         }
 

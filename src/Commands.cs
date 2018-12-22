@@ -147,7 +147,7 @@ namespace Jabber
                 {
                     string new_user = parts[0];
 
-                    if (parts.Length > 1 && parts[1].ToLower() == "--admin")
+                    if (parts.Length > 1 && parts[1].ToLower() == "admin")
                     {
                         setAdmin = true;
                     }

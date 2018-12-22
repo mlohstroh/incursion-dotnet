@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 
@@ -11,6 +12,8 @@ namespace jabber
     class Users
     {
         private const string WaitlistRedisKey = "waitlist:users";
+
+        [JsonProperty]
         private Dictionary<string, User> usersList;
 
 

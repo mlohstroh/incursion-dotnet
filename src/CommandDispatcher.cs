@@ -99,5 +99,19 @@ namespace Jabber
                 }
             }
         }
+
+        /// <summary>
+        /// Returns a list of strings. Each item in the list is an avaliable !command
+        /// </summary>
+        /// <returns>List<string></returns>
+        public List<string> ListCommands()
+        {
+            List<string> commands = new List<string>();
+
+            foreach (KeyValuePair<string, Func<Command, Task>> v in m_commands)
+                commands.Add(v.Key);
+
+            return commands;
+        }
     }
 }

@@ -18,14 +18,20 @@ namespace Jabber
 
         public static void Register()
         {
+            //Set and get instructions
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
-
+            
+            //Get Incursions
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
 
+            //Add, Remove or List users who have elevated permission with the bot.
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
             CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
             CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
+
+            //Returns a list of available commands.
+            CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
         }
 
         public static async Task GetInstructions(Command cmd)
@@ -243,6 +249,36 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(jid.Bare, message);
+            }
+        }
+
+        public static async Task Help(Command cmd)
+        {
+            var who = cmd.XmppMessage.From;
+
+            string cmd_string = "The following commands are available for the incursion bot:";
+            List<string> commands = CommandDispatcher.Instance.ListCommands();
+            foreach (string c in commands)
+                cmd_string += string.Format("\n{0}",c);
+
+            cmd_string += "\nSome commands require elevated permissions.";
+
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
+            {
+                // Lets get their jid
+                Jid directJid = JabberClient.Instance.GetJidForResource(who?.Resource);
+
+                if (directJid == null)
+                {
+                    Console.WriteLine("[Error] Can't reverse Resource to Jid. Resource: \"{0}\"", who?.Resource);
+                    return;
+                }
+
+                await JabberClient.Instance.SendMessage(directJid, cmd_string);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(who.Bare, cmd_string);
             }
         }
     }

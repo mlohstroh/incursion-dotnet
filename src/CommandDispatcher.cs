@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -98,6 +99,17 @@ namespace Jabber
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns a list of strings. Each item in the list is an avaliable !command
+        /// </summary>
+        /// <returns>List<string></returns>
+        public List<string> ListCommands()
+        {
+            List<string> commands = new List<string>();
+
+            return m_commands.Keys.ToList();
         }
     }
 }

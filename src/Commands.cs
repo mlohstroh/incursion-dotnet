@@ -13,27 +13,19 @@ namespace Jabber
     // Static only class for all of our commands
     public static class Commands
     {
+
+        public const string PermissionDenied = "You do not have access to this command! Punk.";
+
         public static void Register()
         {
-            //CommandDispatcher.Instance.RegisterCommand("!hello", HelloWorld);
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
 
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
 
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
-            //CommandDispatcher.Instance.RegisterCommand("!listusers", GetUsers);
-            //CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
-        }
-
-        public static async Task HelloWorld(Command cmd)
-        {
-            var who = cmd.XmppMessage.From;
-
-            if (cmd.XmppMessage.Type == MessageType.GroupChat)
-                await JabberClient.Instance.SendGroupMessage(who.Bare, "Hello Cruel World!");
-            else
-                await JabberClient.Instance.SendMessage(who.Bare, "Hello Cruel World!");
+            CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
+            CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
         }
 
         public static async Task GetInstructions(Command cmd)
@@ -78,22 +70,29 @@ namespace Jabber
                 author = jid.Resource;
             }
 
-            Instructions instructions = new Instructions()
+            Users userObject = Users.Get();
+            string message = PermissionDenied;
+            if (userObject.CheckUser(author, false))
             {
-                Text = cmd.Args,
-                SetAt = DateTime.UtcNow,
-                SetBy = author
-            };
+                Instructions instructions = new Instructions()
+                {
+                    Text = cmd.Args,
+                    SetAt = DateTime.UtcNow,
+                    SetBy = author
+                };
 
-            instructions.Set();
+                instructions.Set();
+
+                message = "Instructions set.";
+            }
 
             if(cmd.XmppMessage.IsGroupMessage())
             {
-                await JabberClient.Instance.SendGroupMessage(jid.Bare, "Instructions set!");
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
             }
             else
             {
-                await JabberClient.Instance.SendMessage(jid.Bare, "Instructions set!");
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
             }
         }
 
@@ -137,31 +136,106 @@ namespace Jabber
                 author = jid.Resource;
             }
 
-            string[] parts = cmd.Args.Trim().Split(" ");
-            bool setAdmin = false;
-            string message = "setuser help:\nAdmins: !adduser target_jabber_name --admin\nUsers: !adduser target_jabber_name";
+            string message = PermissionDenied;
 
-            if (parts.Length > 0)
+            Users userClass = Users.Get();
+            
+
+            if (userClass.CheckUser(author, true))
             {
-                if(!parts[0].Contains('@'))
+                string[] parts = cmd.Args.Trim().Split(" ");
+                bool setAdmin = false;
+                message = "setuser help:\nAdmins: !adduser target_jabber_name --admin\nUsers: !adduser target_jabber_name";
+
+                if (parts.Length > 0)
                 {
-                    string new_user = parts[0];
-
-                    if (parts.Length > 1 && parts[1].ToLower() == "admin")
+                    if (!parts[0].Contains('@'))
                     {
-                        setAdmin = true;
-                    }
+                        string new_user = parts[0];
 
-                    Users userClass = new Users();
-                    userClass.AddUser(new_user, setAdmin);
-                    userClass.Set();
-                    //new Users().AddUser(new_user, setAdmin);
-                    message = string.Format("{0} is now a whitelisted {1}",
-                        new_user,
-                        (setAdmin) ? "admin" : "user"
-                    );
+                        if (parts.Length > 1 && parts[1].ToLower() == "--admin")
+                        {
+                            setAdmin = true;
+                        }
+
+                        userClass.AddUser(new_user, setAdmin);
+                        userClass.Set();
+
+                        message = string.Format("{0} is now a whitelisted {1}",
+                            new_user,
+                            (setAdmin) ? "admin" : "user"
+                        );
+                    }
+                    else
+                    {
+                        message = "Do not include @goonfleet.com in the targets username.";
+                    }
                 }
-                else
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
+            }
+        }
+
+        public static async Task ListUsers(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            Users userClass = Users.Get();
+            string message = PermissionDenied;
+
+
+            if (userClass.CheckUser(author, true))
+            {
+                message = userClass.ListAll();
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
+            }
+        }
+
+        public static async Task RemoveUser(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            Users userClass = Users.Get();
+            string message = PermissionDenied;
+
+            if (userClass.CheckUser(author, true))
+            {
+                string[] parts = cmd.Args.Trim().Split(" ");
+                message = "setuser help:\nAdmins: !removeuser target_jabber_name";
+
+                if (parts.Length > 0 && !parts[0].Contains('@'))
+                {
+                    message = userClass.RemoveUser(parts[0]);
+                    userClass.Set();
+                }
+                else if(parts[0].Contains('@'))
                 {
                     message = "Do not include @goonfleet.com in the targets username.";
                 }

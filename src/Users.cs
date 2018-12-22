@@ -1,7 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using Jabber;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-
+using System.Diagnostics;
 
 namespace jabber
 {
@@ -14,12 +15,19 @@ namespace jabber
         private const string WaitlistRedisKey = "waitlist:users";
 
         [JsonProperty]
-        private Dictionary<string, User> usersList;
+        private Dictionary<string, User> m_usersList = new Dictionary<string, User>();
 
 
-        public static Dictionary<string, User> Get()
+        public static Users Get()
         {
-            return Jabber.RedisHelper.Get<Dictionary<string, User>>(WaitlistRedisKey);
+            var users = Jabber.RedisHelper.Get<Users>(WaitlistRedisKey);
+
+            if(users == null)
+            {
+                users = new Users();
+            }
+
+            return users;
         }
 
         public void Set()
@@ -36,57 +44,82 @@ namespace jabber
         /// <returns> Boolean indicating if the user has permission.</returns>
         public bool CheckUser(string jabber_resource, bool requires_admin)
         {
-            usersList = Users.Get();
+            Config.GetString("JABBER_USERNAME", out string sudo_username);
+            if (jabber_resource == sudo_username)
+                return true;
 
-            if (usersList.ContainsKey(jabber_resource.Trim()))
+
+            if (m_usersList.ContainsKey(jabber_resource.Trim()))
             {
-                if (requires_admin && usersList[jabber_resource].Role != "Admin")
-                {
-                    return false;
-                }
-
-                return true;   
+                if (requires_admin && m_usersList[jabber_resource].Role == "Admin");
+                    return true;
             }            
 
             // User not found
             return false;
         }
 
+
+        public string ListAll()
+        {
+            string output = "";
+
+            foreach (KeyValuePair<string, User> u in m_usersList)
+            {
+                output += string.Format("\n{0} - {1}", u.Value.JabberResource, u.Value.Role);
+            }
+        
+            return  output;
+        }
+
         /// <summary>
-        /// Adds a new user
+        /// Adds a new user to the ACL.
         /// </summary>
         /// <param name="jabber_resource">Example: samuel_the_terrible</param>
         /// <param name="is_admin"></param>
         public void AddUser(string jabber_resource, bool is_admin)
         {
-
-            usersList = Users.Get();
-            
-            if(usersList == null)
+            if(m_usersList == null)
             {
-                usersList = new Dictionary<string, User>();
+                m_usersList = new Dictionary<string, User>();
             }
 
-            if(!usersList.ContainsKey(jabber_resource))
+            if(!m_usersList.ContainsKey(jabber_resource))
             {
                 string role = (is_admin) ? "Admin" : "User";
-                usersList.Add(jabber_resource, new User(jabber_resource, role));
+                m_usersList.Add(jabber_resource, new User() {
+                    JabberResource = jabber_resource,
+                    Role = role
+                });
+            }
+            var u = new User()
+            {
+                JabberResource = "test"
+            };
+        }
+
+        /// <summary>
+        /// Removes a user from the ACL.
+        /// </summary>
+        /// <param name="jabber_resource">Example: samuel_the_terrible</param>
+        public string RemoveUser(string jabber_resource)
+        {
+            if(m_usersList.ContainsKey(jabber_resource))
+            {
+                m_usersList.Remove(jabber_resource);
+                return string.Format("{0} has been removed.", jabber_resource);
+            }
+            else
+            {
+                return string.Format("{0} was not a listed user and could not be removed.", jabber_resource);
             }
         }
     }
 
     internal class User
     {
-        private string jabber_resource;
-        private string role;
-
-        public User(string jabber_resource, string role)
-        {
-            this.Jabber_resource = jabber_resource;
-            this.Role = role;
-        }
-
-        public string Jabber_resource { get => jabber_resource; set => jabber_resource = value; }
-        public string Role { get => role; set => role = value; }
+        public string JabberResource { get; set; }
+        public string Role { get; set; }
     }
+  
 }

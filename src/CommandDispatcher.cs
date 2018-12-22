@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -86,7 +87,15 @@ namespace Jabber
                 Func<Command, Task> func = null;
                 if(m_commands.TryGetValue(cmd.Cmd, out func))
                 {
-                    await func(cmd);
+                    try
+                    {
+                        await func(cmd);
+                    }
+                    catch(Exception ex)
+                    {
+                        // Take this out at launch
+                        Debugger.Break();
+                    }
                 }
             }
         }

@@ -227,20 +227,20 @@ internal class IncursionFocus
     /// <returns></returns>
     public string GetSecType()
     {
-        if (GetSecStatus() > 0.499)
+        //	0.279866546	float
+
+
+        float security_status = GetSecStatus();
+        if (security_status > 0.495)
         {
             return "Highsec";
         }
-        else if (GetSecStatus() < 0.498 && GetSecStatus() > 0.00)
+        else if (security_status <= 0.494 && GetSecStatus() > 0.005)
         {
             return "Lowsec";
-        } 
-        else if (GetSecStatus() < 0.00)
-        {
-            return "Nullsec";
         }
 
-        return "";
+        return "Nullsec";
     }
 
     public async Task<int> GetDistanceFromStaging()
@@ -256,7 +256,7 @@ internal class IncursionFocus
     
     public override string ToString()
     {
-        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.00}%  influence - {5} est jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), Influence, GetDistanceFromStaging(), Dotlan());
+        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
     }
 
 

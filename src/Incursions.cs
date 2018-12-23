@@ -49,6 +49,8 @@ namespace Jabber
                 UpdateIncursionsAsync();
                 //m_lastChecked = DateTime.UtcNow;
             }
+
+            this.Set();
         }
 
         /// <summary>
@@ -84,8 +86,7 @@ namespace Jabber
                         string.Format("New Incursion Detected {0} (Region: {1}) Sec Status: {2:0.0} - {3} estimated jumps from staging.\n{4}",
                             new_incursion.Constellation.Name, new_incursion.RegionName, new_incursion.GetSecStatus(), await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                     );
-                }
-                
+                }               
             }
 
             //Compare incursions and look for changes. Push strings to a list of changes.
@@ -157,15 +158,22 @@ namespace Jabber
     }
 }
 
+[Serializable]
 internal class IncursionFocus
 {
     private const int DefaultStagingSystemId = 30004759;
 
+    [JsonProperty]
     Constellation constellation;
+    [JsonProperty]
     private string regionName;
+    [JsonProperty]
     private bool hasBoss;
+    [JsonProperty]
     private double influence;
+    [JsonProperty]
     private string state;
+    [JsonProperty]
     private Dictionary<long, SolarSystem> infestedSystems;
 
 
@@ -248,7 +256,7 @@ internal class IncursionFocus
     
     public override string ToString()
     {
-        return string.Format("{0} Incursion {1} (Region: {2}) Sansha\'s Influence: {3:0.0} - {4} est jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), GetDistanceFromStaging(), Dotlan());
+        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.00}%  influence - {5} est jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), Influence, GetDistanceFromStaging(), Dotlan());
     }
 
 

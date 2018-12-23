@@ -138,16 +138,17 @@ namespace Jabber
             }
 
             
-            nIncursions incursionClass = nIncursions.Get();
+            NIncursions incursionClass = NIncursions.Get();
+            incursionClass.CheckIncursions();
             incursionClass.Set();
 
             if (cmd.XmppMessage.IsGroupMessage())
             {
-                await JabberClient.Instance.SendGroupMessage(jid.Bare, incursionClass.CheckIncursions());
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, incursionClass.ToString());
             }
             else
             {
-                await JabberClient.Instance.SendMessage(jid.Bare, incursionClass.CheckIncursions());
+                await JabberClient.Instance.SendMessage(jid.Bare, incursionClass.ToString());
             }
         }
 

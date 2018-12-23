@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Jabber
 {
-    public class nIncursions
+    public class NIncursions
     {
         // Incursion Config Values
         private const float SecuritySystemThreshold = 0.4f;
@@ -23,13 +23,13 @@ namespace Jabber
         [JsonProperty]
         private DateTime m_lastChecked;//Timestamp of the last ESI check! Don't do the ESI check if we did it in the last 5 minutes.
 
-        public static nIncursions Get()
+        public static NIncursions Get()
         {
-            var m_incursions = Jabber.RedisHelper.Get<nIncursions>(WaitlistRedisKey);
+            var m_incursions = Jabber.RedisHelper.Get<NIncursions>(WaitlistRedisKey);
 
             if (m_incursions == null)
             {
-                m_incursions = new nIncursions();
+                m_incursions = new NIncursions();
             }
 
             return m_incursions;
@@ -37,10 +37,10 @@ namespace Jabber
 
         public void Set()
         {
-            Jabber.RedisHelper.Set<nIncursions>(WaitlistRedisKey, this);
+            Jabber.RedisHelper.Set<NIncursions>(WaitlistRedisKey, this);
         }
 
-        public string CheckIncursions()
+        public void CheckIncursions()
         {
             // If we haven't checked incursions in the last five minutes
             // run the UpdateIncursions method.
@@ -49,21 +49,6 @@ namespace Jabber
                 UpdateIncursionsAsync();
                 //m_lastChecked = DateTime.UtcNow;
             }
-
-            // Print Incursions
-            string output = "";
-
-            if(this.m_activeIncursions.Count == 0) 
-            {
-                output += string.Format("No incursions!");
-            }
-            else
-            {
-                foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
-                    output += inc.Value.ToString();
-            }
-
-            return string.Format("{0}", output);
         }
 
         /// <summary>
@@ -79,8 +64,6 @@ namespace Jabber
                 if(m_activeIncursions.ContainsKey(Incursion.ConstellationId))
                 {
                     Console.Beep();// Update incursion
-                    Console.Beep();
-                    Console.Beep();
                 }
                 else
                 {
@@ -98,8 +81,7 @@ namespace Jabber
                     m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
 
                     await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                        //New Incursion Detected YX-LYK (Region: Delve) -0.69 - 12 est jumps from staging\nhttp://dotlan
-                        string.Format("New Incursion Detected {0} (Region: {1}) Sansha\'s Sec Status: {2:0.0} - {3} est jumps from staging.\n{4}",
+                        string.Format("New Incursion Detected {0} (Region: {1}) Sec Status: {2:0.0} - {3} estimated jumps from staging.\n{4}",
                             new_incursion.Constellation.Name, new_incursion.RegionName, new_incursion.GetSecStatus(), await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                     );
                 }
@@ -107,10 +89,24 @@ namespace Jabber
             }
 
             //Compare incursions and look for changes. Push strings to a list of changes.
+        }
 
-            //Broadcast incursions to the requested channel
+        /// <summary>
+        /// Returns a list of incursions.
+        /// </summary>
+        public override string ToString()
+        {
+            if (m_activeIncursions.Count == 0)
+                return "No incursions found!";
 
-            //this.Set();
+            string incursions = "";
+            foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
+            {
+                if(inc.Value.GetSecStatus() < 0.5)
+                    incursions += string.Format("\n{0}", inc.Value.ToString());
+            }
+
+            return incursions;
         }
     }
 
@@ -253,7 +249,6 @@ internal class IncursionFocus
     public override string ToString()
     {
         return string.Format("{0} Incursion {1} (Region: {2}) Sansha\'s Influence: {3:0.0} - {4} est jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), GetDistanceFromStaging(), Dotlan());
-        // Lowsec|Nullsec|Highsec Incursion {constellation.name} (Region: {region.name}) -0.69 - {noJumps} est jumps from staging - dotlan
     }
 
 

@@ -22,7 +22,6 @@ namespace Jabber
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
 
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
-            CommandDispatcher.Instance.RegisterCommand("!test", TestIncursions);
 
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
             CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
@@ -107,39 +106,9 @@ namespace Jabber
                 author = jid.Resource;
             }
 
-            List<Incursion> incursions = await EsiWrapper.GetIncursions();
-
-            StringBuilder builder = new StringBuilder();
-            builder.AppendLine();
-
-            foreach(var incursion in incursions)
-            {
-                builder.AppendLine(await incursion.GetDefaultIncursionMessage());
-            }
-
-            if (cmd.XmppMessage.IsGroupMessage())
-            {
-                await JabberClient.Instance.SendGroupMessage(jid.Bare, builder.ToString());
-            }
-            else
-            {
-                await JabberClient.Instance.SendMessage(jid.Bare, builder.ToString());
-            }
-        }
-
-        public static async Task TestIncursions(Command cmd)
-        {
-            var jid = cmd.XmppMessage.From;
-            var author = jid.User;
-
-            if (cmd.XmppMessage.IsGroupMessage())
-            {
-                author = jid.Resource;
-            }
-
             
-            NIncursions incursionClass = NIncursions.Get();
-            incursionClass.CheckIncursions();
+            Incursions incursionClass = Incursions.Get();
+            incursionClass.CheckIncursionsAsync();
             incursionClass.Set();
 
             if (cmd.XmppMessage.IsGroupMessage())

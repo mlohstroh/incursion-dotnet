@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Jabber;
 using System.Linq;
+using jabber;
 
 namespace Jabber
 {
-    public class NIncursions
+    public class Incursions
     {
         // Incursion Config Values
         private const float SecuritySystemThreshold = 0.4f;
@@ -23,13 +24,13 @@ namespace Jabber
         [JsonProperty]
         private DateTime m_lastChecked;//Timestamp of the last ESI check! Don't do the ESI check if we did it in the last 5 minutes.
 
-        public static NIncursions Get()
+        public static Incursions Get()
         {
-            var m_incursions = Jabber.RedisHelper.Get<NIncursions>(WaitlistRedisKey);
+            var m_incursions = Jabber.RedisHelper.Get<Incursions>(WaitlistRedisKey);
 
             if (m_incursions == null)
             {
-                m_incursions = new NIncursions();
+                m_incursions = new Incursions();
             }
 
             return m_incursions;
@@ -37,26 +38,26 @@ namespace Jabber
 
         public void Set()
         {
-            Jabber.RedisHelper.Set<NIncursions>(WaitlistRedisKey, this);
+            Jabber.RedisHelper.Set<Incursions>(WaitlistRedisKey, this);
         }
 
-        public void CheckIncursions()
+        public async void CheckIncursionsAsync()
         {
             // If we haven't checked incursions in the last five minutes
             // run the UpdateIncursions method.
             if(true)
             {
-                UpdateIncursionsAsync();
+                await UpdateIncursionsAsync();
                 //m_lastChecked = DateTime.UtcNow;
+                this.Set();
             }
 
-            this.Set();
         }
 
         /// <summary>
         /// Gets incursions using ESI and updates our list.
         /// </summary>
-        public async void UpdateIncursionsAsync()
+        public async Task UpdateIncursionsAsync()
         {
             //ESI Lookup
             List<Incursion> incursions = await EsiWrapper.GetIncursions();
@@ -83,8 +84,8 @@ namespace Jabber
                     m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
 
                     await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                        string.Format("New Incursion Detected {0} (Region: {1}) Sec Status: {2:0.0} - {3} estimated jumps from staging.\n{4}",
-                            new_incursion.Constellation.Name, new_incursion.RegionName, new_incursion.GetSecStatus(), await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
+                        string.Format("New Incursion Detected {0} (Region: {1}) {2:0.0} - {3} estimated jumps from staging - {4}",
+                            new_incursion.Constellation.Name, new_incursion.RegionName, Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1), await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                     );
                 }               
             }
@@ -103,57 +104,11 @@ namespace Jabber
             string incursions = "";
             foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
             {
-                if(inc.Value.GetSecStatus() < 0.5)
+                if(Math.Round(IncursionFocus.GetTrueSec(inc.Value.GetSecStatus()), 1) < 0.5)
                     incursions += string.Format("\n{0}", inc.Value.ToString());
             }
 
             return incursions;
-        }
-    }
-
-    public static class Incursions
-    {
-        private const float SecuritySystemThreshold = 0.4f;
-        private const int DefaultStagingSystemId = 30004759;
-
-        public static void CheckIncursions()
-        {
-            // Called by the scheduler
-        }
-
-        public static async Task<string> GetDefaultIncursionMessage(this Incursion incursion)
-        {
-            Constellation constellation = await EsiWrapper.GetConstellation(incursion.ConstellationId);
-            string regionName = await constellation.GetRegionName();
-
-            string dotlan = string.Format("http://evemaps.dotlan.net/map/{0}/{1}", regionName, constellation.Name).DotLanSafeString();
-
-            float systemStatus = SecuritySystemThreshold; // awful fallback
-            // It should always have at least one infected system
-            int jumpCount = -1; // Error
-            if(incursion.InfestedSystems.Length > 0)
-            {
-                int systemId = (int)incursion.InfestedSystems[0];
-
-                int[] jumps = await EsiWrapper.GetJumps(DefaultStagingSystemId, systemId);
-                jumpCount = jumps.Length;
-
-                SolarSystem system = await EsiWrapper.GetSystem(systemId);
-                systemStatus = (float)system.SecurityStatus;
-            }
-
-            return string.Format("{0:F1} ({1} - {2}) Influence: {3:F1}% - Status {4} - {5} estimated jumps from staging - {6}", systemStatus, constellation.Name, regionName, incursion.Influence * 100, incursion.State, jumpCount, dotlan);
-        }
-
-        public static async Task<string> GetRegionName(this Constellation constellation)
-        {
-            Region region = await EsiWrapper.GetRegion((int)constellation.RegionId);
-            return region.Name;
-        }
-
-        public static string DotLanSafeString(this string s)
-        {
-             return s.Replace(' ', '_');
         }
     }
 }
@@ -195,7 +150,7 @@ internal class IncursionFocus
         if (InfestedSystems == null)
             InfestedSystems = new Dictionary<long, SolarSystem>();
 
-        foreach(long systemID in systemIDs)
+        foreach (long systemID in systemIDs)
         {
             if (InfestedSystems.ContainsKey(systemID))
             {
@@ -216,8 +171,8 @@ internal class IncursionFocus
     {
         if (InfestedSystems.Count > 0)
             return (float)InfestedSystems.First().Value.SecurityStatus;
-       
-        return  (float)-10.0;
+
+        return (float)-10.0;
     }
 
     /// <summary>
@@ -227,15 +182,12 @@ internal class IncursionFocus
     /// <returns></returns>
     public string GetSecType()
     {
-        //	0.279866546	float
-
-
-        float security_status = GetSecStatus();
-        if (security_status > 0.495)
+        float security_status = GetTrueSec(GetSecStatus());
+        if (Math.Round(security_status, 1) >= 0.5)
         {
             return "Highsec";
         }
-        else if (security_status <= 0.494 && GetSecStatus() > 0.005)
+        else if (Math.Round(security_status, 1) <= 0.4 && Math.Round(security_status, 1) >= 0.1)
         {
             return "Lowsec";
         }
@@ -248,20 +200,31 @@ internal class IncursionFocus
         if (InfestedSystems.Count > 0)
         {
             int[] jumps = await EsiWrapper.GetJumps(DefaultStagingSystemId, InfestedSystems.First().Value.SystemId);
-            return  jumps.Length;
+            return jumps.Length;
         }
 
         return 0;
     }
-    
-    public override string ToString()
-    {
-        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetSecStatus(), 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
-    }
 
+    public static float GetTrueSec(float SecurityStatus)
+    {
+        if(SecurityStatus > 0.0 || SecurityStatus < 0.05)
+        {
+            float temp = (float)Math.Ceiling(SecurityStatus * 100);
+            return (float)temp / 100;
+            
+        }
+
+        return (float)Math.Round(SecurityStatus, 2);
+    }
 
     public string Dotlan()
     {
-        return string.Format("http://evemaps.dotlan.net/map/{0}/{1}", RegionName, Constellation.Name).Replace(' ', '_');
+        return string.Format("http://evemaps.dotlan.net/map/{0}/{1}", RegionName, Constellation.Name).DotlanSafe();
+    }
+
+    public override string ToString()
+    {
+        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetTrueSec(GetSecStatus()), 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
     }
 }

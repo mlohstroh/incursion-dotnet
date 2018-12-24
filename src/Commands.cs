@@ -112,23 +112,18 @@ namespace Jabber
                 author = jid.Resource;
             }
 
-            List<Incursion> incursions = await EsiWrapper.GetIncursions();
-
-            StringBuilder builder = new StringBuilder();
-            builder.AppendLine();
-
-            foreach(var incursion in incursions)
-            {
-                builder.AppendLine(await incursion.GetDefaultIncursionMessage());
-            }
+            
+            Incursions incursionClass = Incursions.Get();
+            await incursionClass.CheckIncursions();
+            incursionClass.Set();
 
             if (cmd.XmppMessage.IsGroupMessage())
             {
-                await JabberClient.Instance.SendGroupMessage(jid.Bare, builder.ToString());
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, incursionClass.ToString());
             }
             else
             {
-                await JabberClient.Instance.SendMessage(jid.Bare, builder.ToString());
+                await JabberClient.Instance.SendMessage(jid.Bare, incursionClass.ToString());
             }
         }
 

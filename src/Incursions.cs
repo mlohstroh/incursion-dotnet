@@ -3,116 +3,231 @@ using ESI.NET.Models.Incursions;
 using System.Collections.Generic;
 using ESI.NET.Models.Universe;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Jabber;
+using System.Linq;
+using jabber;
 
 namespace Jabber
 {
-    public static class Incursions
+    public class Incursions
     {
-        private const float SecuritySystemThreshold = 0.4f;
-        private const int DefaultStagingSystemId = 30004759;
+        private const string WaitlistRedisKey = "waitlist:incursions";
+        private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
+        
+        //New Vars
+        [JsonProperty]
+        private Dictionary<int, IncursionFocus> m_activeIncursions = new Dictionary<int, IncursionFocus>();
+        [JsonProperty]
+        private DateTime m_lastChecked;//Timestamp of the last ESI check! Don't do the ESI check if we did it in the last 5 minutes.
 
-        public static void CheckIncursions()
+        public static Incursions Get()
         {
-            // Called by the scheduler
-        }
+            var m_incursions = Jabber.RedisHelper.Get<Incursions>(WaitlistRedisKey);
 
-        public static async Task<string> GetDefaultIncursionMessage(this Incursion incursion)
-        {
-            Constellation constellation = await EsiWrapper.GetConstellation(incursion.ConstellationId);
-            string regionName = await constellation.GetRegionName();
-
-            string dotlan = string.Format("http://evemaps.dotlan.net/map/{0}/{1}", regionName, constellation.Name).DotLanSafeString();
-
-            float systemStatus = SecuritySystemThreshold; // awful fallback
-            // It should always have at least one infected system
-            int jumpCount = -1; // Error
-            if(incursion.InfestedSystems.Length > 0)
+            if (m_incursions == null)
             {
-                int systemId = (int)incursion.InfestedSystems[0];
-
-                int[] jumps = await EsiWrapper.GetJumps(DefaultStagingSystemId, systemId);
-                jumpCount = jumps.Length;
-
-                SolarSystem system = await EsiWrapper.GetSystem(systemId);
-                systemStatus = (float)system.SecurityStatus;
+                m_incursions = new Incursions();
             }
 
-            return string.Format("{0:F1} ({1} - {2}) Influence: {3:F1}% - Status {4} - {5} estimated jumps from staging - {6}", systemStatus, constellation.Name, regionName, incursion.Influence * 100, incursion.State, jumpCount, dotlan);
+            return m_incursions;
         }
 
-        public static async Task<string> GetRegionName(this Constellation constellation)
+        public void Set()
         {
-            Region region = await EsiWrapper.GetRegion((int)constellation.RegionId);
-            return region.Name;
+            Jabber.RedisHelper.Set<Incursions>(WaitlistRedisKey, this);
         }
 
-        public static string DotLanSafeString(this string s)
+        public async Task CheckIncursions()
         {
-             return s.Replace(' ', '_');
+            // If we haven't checked incursions in the last five minutes
+            // run the UpdateIncursions method.
+            if(true)
+            {
+                await UpdateIncursionsAsync();
+                //m_lastChecked = DateTime.UtcNow;
+                this.Set();
+            }
+
+        }
+
+        /// <summary>
+        /// Gets incursions using ESI and updates our list.
+        /// </summary>
+        public async Task UpdateIncursionsAsync()
+        {
+            //ESI Lookup
+            List<Incursion> incursions = await EsiWrapper.GetIncursions();
+            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
+
+            foreach (var Incursion in incursions)
+            {
+                if(m_activeIncursions.ContainsKey(Incursion.ConstellationId))
+                {
+                    Console.Beep();// Update incursion
+                }
+                else
+                {
+                    IncursionFocus new_incursion = new IncursionFocus()
+                    {
+                        HasBoss = Incursion.HasBoss,
+                        Influence = Incursion.Influence,
+                        State = Incursion.State,
+                    };
+
+                    await new_incursion.SetConstellation(Incursion.ConstellationId);
+                    await new_incursion.SetInfestedSystems(Incursion.InfestedSystems);
+                    
+                    //Store Incursion
+                    m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
+
+                    if (Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1) < max_sec)
+                    {
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                            string.Format("New {0} Incursion Detected {1} (Region: {2}) - {3} estimated jumps from staging - {4}",
+                               new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
+                        );
+                    }
+                }               
+            }
+
+            //Compare incursions and look for changes. Push strings to a list of changes.
+        }
+
+        /// <summary>
+        /// Returns a list of incursions.
+        /// </summary>
+        public override string ToString()
+        {
+            if (m_activeIncursions.Count == 0)
+                return "No incursions found!";
+
+            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
+
+            string incursions = "";
+            foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
+            {
+                if(Math.Round(IncursionFocus.GetTrueSec(inc.Value.GetSecStatus()), 1) < max_sec)
+                    incursions += string.Format("\n{0}", inc.Value.ToString());
+            }
+
+            return incursions;
         }
     }
 }
 
+[Serializable]
+public class IncursionFocus
+{
+    private const int DefaultStagingSystemId = 30004759;
 
-//// TODO: It feels like this method doesn't belong here since the struct isn't here
-//func(server* Server) GetConstellationForIncursion(incursion* EsiIncursion) * EsiConstellation
-//{
-//	return server.GetConstellation(incursion.ConstellationId)
-//}
-
-//func(server* Server) GetNewIncursionMessage(incursion* EsiIncursion, buffer* bytes.Buffer)
-//{
-//    constellation:= server.GetConstellationForIncursion(incursion)
-
-//    dotlan:= fmt.Sprintf("http://evemaps.dotlan.net/map/%v/%v", constellation.RegionName, constellation.Name)
-
-
-//    dotlan = strings.Replace(dotlan, " ", "_", -1)
-
-//    // Filter
-//    if incursion.StagingSystem.SecurityStatus <= server.Config.SecurityStatusThreshold {
-//        buffer.WriteString(fmt.Sprintf("New Incursion detected in %v {%.1v} {%v - %v} - %v jumps from staging - Dotlan: %v\n", incursion.StagingSystem.Name, incursion.StagingSystem.SecurityStatus, incursion.ConsellationName, constellation.RegionName, len(incursion.Route) - 1, dotlan))
-
-//    }
-//}
-
-//func(server* Server) GetDefaultIncurionsMessage(incursion* EsiIncursion, buffer* bytes.Buffer)
-//{
-//    constellation:= server.GetConstellationForIncursion(incursion)
-
-//    dotlan:= fmt.Sprintf("http://evemaps.dotlan.net/map/%v/%v", constellation.RegionName, constellation.Name)
-
-//    dotlan = strings.Replace(dotlan, " ", "_", -1)
+    [JsonProperty]
+    private Constellation m_constellation;
+    [JsonProperty]
+    private string m_regionName;
+    [JsonProperty]
+    private bool m_hasBoss;
+    [JsonProperty]
+    private double m_influence;
+    [JsonProperty]
+    private string m_state;
+    [JsonProperty]
+    private Dictionary<long, SolarSystem> infestedSystems;
 
 
-//    if incursion.StagingSystem.SecurityStatus <= server.Config.SecurityStatusThreshold {
-//        buffer.WriteString(fmt.Sprintf("%v {%.1v} {%v - %v} Influence: %.3v%% - Status %v- %v jumps from staging - Dotlan: %v\n", incursion.StagingSystem.Name, incursion.StagingSystem.SecurityStatus, incursion.ConsellationName, constellation.RegionName, incursion.Influence * 100, incursion.State, len(incursion.Route) - 1, dotlan))
+    public Constellation Constellation => m_constellation;
+    public string RegionName => m_regionName;
+    public bool HasBoss { get; set; }
+    public double Influence { get; set; }
+    public string State { get; set; }
+    public Dictionary<long, SolarSystem> InfestedSystems { get; set; }
 
-//    }
-//}
+    public async Task SetConstellation(int constellationID)
+    {
+        m_constellation = await EsiWrapper.GetConstellation(constellationID);
+        m_regionName = await Constellation.GetRegionName();
+    }
 
-//func(server* Server) GetChangedIncursionMessage(incursion* EsiIncursion, buffer* bytes.Buffer)
-//{
-//    constellation:= server.GetConstellationForIncursion(incursion)
+    public async Task SetInfestedSystems(long[] systemIDs)
+    {
+        if (InfestedSystems == null)
+            InfestedSystems = new Dictionary<long, SolarSystem>();
 
-//    dotlan:= fmt.Sprintf("http://evemaps.dotlan.net/map/%v/%v", constellation.RegionName, constellation.Name)
+        foreach (long systemID in systemIDs)
+        {
+            if (InfestedSystems.ContainsKey(systemID))
+            {
+                InfestedSystems[systemID] = await EsiWrapper.GetSystem((int)systemID);
+            }
+            else
+            {
+                InfestedSystems.Add(systemID, await EsiWrapper.GetSystem((int)systemID));
+            }
+        }
+    }
 
-//    dotlan = strings.Replace(dotlan, " ", "_", -1)
+    /// <summary>
+    /// Returns the Sec status of one system.
+    /// </summary>
+    /// <returns>Float ranging from -1.0 to 1.0. Returns -10 for an unknown sec status</returns>
+    public float GetSecStatus()
+    {
+        if (InfestedSystems.Count > 0)
+            return (float)InfestedSystems.First().Value.SecurityStatus;
 
+        return (float)-10.0;
+    }
 
-//    if incursion.StagingSystem.SecurityStatus <= server.Config.SecurityStatusThreshold {
-//        buffer.WriteString(fmt.Sprintf("Incursion in %v {%.1v} {%v - %v} Changed status to - Status %v - %v jumps from staging - Dotlan: %v\n", incursion.StagingSystem.Name, incursion.StagingSystem.SecurityStatus, incursion.ConsellationName, constellation.RegionName, incursion.State, len(incursion.Route) - 1, dotlan))
+    /// <summary>
+    /// Returns the security type of the system 
+    /// from the GetSecStatus() method.
+    /// </summary>
+    /// <returns></returns>
+    public string GetSecType()
+    {
+        float security_status = GetTrueSec(GetSecStatus());
+        if (Math.Round(security_status, 1) >= 0.5)
+        {
+            return "Highsec";
+        }
+        else if (Math.Round(security_status, 1) <= 0.4 && Math.Round(security_status, 1) >= 0.1)
+        {
+            return "Lowsec";
+        }
 
-//    }
-//}
+        return "Nullsec";
+    }
 
-//func(server* Server) GetDespawnedIncursionMessage(incursion* EsiIncursion, buffer* bytes.Buffer)
-//{
-//    constellation:= server.GetConstellationForIncursion(incursion)
+    public async Task<int> GetDistanceFromStaging()
+    {
+        if (InfestedSystems.Count > 0)
+        {
+            int[] jumps = await EsiWrapper.GetJumps(DefaultStagingSystemId, InfestedSystems.First().Value.SystemId);
+            return jumps.Length;
+        }
 
+        return 0;
+    }
 
-//    if incursion.StagingSystem.SecurityStatus <= server.Config.SecurityStatusThreshold {
-//        buffer.WriteString(fmt.Sprintf("Incursion in %v {%.1v} {%v - %v} Despawned", incursion.StagingSystem.Name, incursion.StagingSystem.SecurityStatus, incursion.ConsellationName, constellation.RegionName))
+    public static float GetTrueSec(float SecurityStatus)
+    {
+        if(SecurityStatus > 0.0 || SecurityStatus < 0.05)
+        {
+            float temp = (float)Math.Ceiling(SecurityStatus * 100);
+            return (float)temp / 100;
+            
+        }
 
-//    }
-//}
+        return (float)Math.Round(SecurityStatus, 2);
+    }
+
+    public string Dotlan()
+    {
+        return string.Format("http://evemaps.dotlan.net/map/{0}/{1}", RegionName, Constellation.Name).DotlanSafe();
+    }
+
+    public override string ToString()
+    {
+        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0}%  influence - {4} est. jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
+    }
+}

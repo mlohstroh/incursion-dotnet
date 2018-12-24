@@ -46,7 +46,7 @@ namespace Jabber
             {
                 await UpdateIncursionsAsync();
                 //m_lastChecked = DateTime.UtcNow;
-                this.Set();
+                //this.Set();
             }
 
         }
@@ -64,7 +64,28 @@ namespace Jabber
             {
                 if(m_activeIncursions.ContainsKey(Incursion.ConstellationId))
                 {
-                    Console.Beep();// Update incursion
+                    IncursionFocus inc = m_activeIncursions[Incursion.ConstellationId];
+
+                    //Update Influence.
+                    inc.Influence = Incursion.Influence;
+
+                    //Status
+                    if(inc.State != Incursion.State)
+                    {
+                        inc.State = Incursion.State;
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                            string.Format("{0} incursion in {1} (Region: {2}) is now {3}.", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                        );
+                    }
+
+                    //Boss spotted?
+                    if(!inc.HasBoss && Incursion.HasBoss)
+                    {
+                        inc.HasBoss = Incursion.HasBoss;
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                            string.Format("{0} incursion in {1} (Region: {2}) - The mothership has been spotted!", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                        );
+                    }
                 }
                 else
                 {
@@ -228,6 +249,6 @@ public class IncursionFocus
 
     public override string ToString()
     {
-        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0}%  influence - {4} est. jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
+        return string.Format("{0} incursion in {1} (Region: {2}) {3}: {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, State, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
     }
 }

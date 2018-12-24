@@ -114,35 +114,35 @@ namespace Jabber
 }
 
 [Serializable]
-internal class IncursionFocus
+public class IncursionFocus
 {
     private const int DefaultStagingSystemId = 30004759;
 
     [JsonProperty]
-    Constellation constellation;
+    private Constellation m_constellation;
     [JsonProperty]
-    private string regionName;
+    private string m_regionName;
     [JsonProperty]
-    private bool hasBoss;
+    private bool m_hasBoss;
     [JsonProperty]
-    private double influence;
+    private double m_influence;
     [JsonProperty]
-    private string state;
+    private string m_state;
     [JsonProperty]
     private Dictionary<long, SolarSystem> infestedSystems;
 
 
-    public Constellation Constellation => constellation;
-    public string RegionName => regionName;
-    public bool HasBoss { get => hasBoss; set => hasBoss = value; }
-    public double Influence { get => influence; set => influence = value; }
-    public string State { get => state; set => state = value; }
-    public Dictionary<long, SolarSystem> InfestedSystems { get => infestedSystems; set => infestedSystems = value; }
+    public Constellation Constellation => m_constellation;
+    public string RegionName => m_regionName;
+    public bool HasBoss { get; set; }
+    public double Influence { get; set; }
+    public string State { get; set; }
+    public Dictionary<long, SolarSystem> InfestedSystems { get; set; }
 
     public async Task SetConstellation(int constellationID)
     {
-        constellation = await EsiWrapper.GetConstellation(constellationID);
-        regionName = await Constellation.GetRegionName();
+        m_constellation = await EsiWrapper.GetConstellation(constellationID);
+        m_regionName = await Constellation.GetRegionName();
     }
 
     public async Task SetInfestedSystems(long[] systemIDs)

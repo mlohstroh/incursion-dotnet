@@ -86,5 +86,20 @@ namespace Jabber
 
             return val != null;
         }
+
+        public static bool GetFloat(string key, out float val)
+        {
+            Initialize();
+
+            val = 0;
+            string found = Environment.GetEnvironmentVariable(key);
+
+            if (found == null)
+                return false;
+
+            val = float.Parse(found);
+
+            return true;
+        }
     }
 }

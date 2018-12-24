@@ -108,7 +108,7 @@ namespace Jabber
 
             
             Incursions incursionClass = Incursions.Get();
-            incursionClass.CheckIncursionsAsync();
+            await incursionClass.CheckIncursions();
             incursionClass.Set();
 
             if (cmd.XmppMessage.IsGroupMessage())

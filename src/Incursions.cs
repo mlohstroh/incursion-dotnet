@@ -12,12 +12,9 @@ namespace Jabber
 {
     public class Incursions
     {
-        // Incursion Config Values
-        private const float SecuritySystemThreshold = 0.4f;
-        
         private const string WaitlistRedisKey = "waitlist:incursions";
         private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
-
+        
         //New Vars
         [JsonProperty]
         private Dictionary<int, IncursionFocus> m_activeIncursions = new Dictionary<int, IncursionFocus>();
@@ -41,7 +38,7 @@ namespace Jabber
             Jabber.RedisHelper.Set<Incursions>(WaitlistRedisKey, this);
         }
 
-        public async void CheckIncursionsAsync()
+        public async Task CheckIncursions()
         {
             // If we haven't checked incursions in the last five minutes
             // run the UpdateIncursions method.
@@ -61,6 +58,7 @@ namespace Jabber
         {
             //ESI Lookup
             List<Incursion> incursions = await EsiWrapper.GetIncursions();
+            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
 
             foreach (var Incursion in incursions)
             {
@@ -83,10 +81,13 @@ namespace Jabber
                     //Store Incursion
                     m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
 
-                    await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                        string.Format("New Incursion Detected {0} (Region: {1}) {2:0.0} - {3} estimated jumps from staging - {4}",
-                            new_incursion.Constellation.Name, new_incursion.RegionName, Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1), await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
-                    );
+                    if (Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1) < max_sec)
+                    {
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                            string.Format("New {0} Incursion Detected {1} (Region: {2}) - {3} estimated jumps from staging - {4}",
+                               new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
+                        );
+                    }
                 }               
             }
 
@@ -101,10 +102,12 @@ namespace Jabber
             if (m_activeIncursions.Count == 0)
                 return "No incursions found!";
 
+            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
+
             string incursions = "";
             foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
             {
-                if(Math.Round(IncursionFocus.GetTrueSec(inc.Value.GetSecStatus()), 1) < 0.5)
+                if(Math.Round(IncursionFocus.GetTrueSec(inc.Value.GetSecStatus()), 1) < max_sec)
                     incursions += string.Format("\n{0}", inc.Value.ToString());
             }
 
@@ -225,6 +228,6 @@ public class IncursionFocus
 
     public override string ToString()
     {
-        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0} @ {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, GetTrueSec(GetSecStatus()), 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
+        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0}%  influence - {4} est. jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
     }
 }

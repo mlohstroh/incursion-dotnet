@@ -109,10 +109,35 @@ namespace Jabber
                                new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                         );
                     }
-                }               
+                }            
             }
 
-            //Compare incursions and look for changes. Push strings to a list of changes.
+
+            //Foreach in dic if not in libary delete
+            List<int> dead_incursions = new List<int>();
+            foreach (KeyValuePair<int, IncursionFocus> known_inc in m_activeIncursions)
+            {
+                for (int i = 0; i < incursions.Count; i++)
+                {
+                    if (known_inc.Key == incursions[i].ConstellationId)
+                        break;
+
+                    if(i + 1 == incursions.Count)
+                    {
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                                string.Format("{0} incursion {1} (Region: {2}) despawned.",
+                                   known_inc.Value.GetSecType(), known_inc.Value.Constellation.Name, known_inc.Value.RegionName)
+                        );
+
+                        dead_incursions.Add(known_inc.Key);
+                    }
+                }
+            }
+
+            foreach (int delete in dead_incursions)
+                m_activeIncursions.Remove(delete);
+
+            this.Set();
         }
 
         /// <summary>

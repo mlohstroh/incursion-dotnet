@@ -44,7 +44,7 @@ namespace Jabber
             // run the UpdateIncursions method.
             if(true)
             {
-                await UpdateIncursionsAsync();
+                await UpdateIncursions();
                 //m_lastChecked = DateTime.UtcNow;
                 //this.Set();
             }
@@ -54,7 +54,7 @@ namespace Jabber
         /// <summary>
         /// Gets incursions using ESI and updates our list.
         /// </summary>
-        public async Task UpdateIncursionsAsync()
+        public async Task UpdateIncursions()
         {
             //ESI Lookup
             List<Incursion> incursions = await EsiWrapper.GetIncursions();

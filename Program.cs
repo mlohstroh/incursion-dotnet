@@ -1,4 +1,5 @@
-﻿using System;
+﻿using jabber.src.services;
+using System;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +43,14 @@ namespace Jabber
 
             jabberTask.Start();
             commandTask.Start();
+
+            DateTime now = DateTime.Now;
+            Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 5, async () =>
+            {
+                Incursions inc = new Incursions();
+                await inc.UpdateIncursions();
+                inc.Set();
+            });
 
             // Wait for signal from other thread
             threadBlocker.WaitOne();

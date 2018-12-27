@@ -60,6 +60,7 @@ namespace Jabber
                 Username = username,
                 Password = password,
                 XmppDomain = xmppDomain,
+                Resource = "Bot",
                 HostnameResolver = new SrvNameResolver(),
             };
         }

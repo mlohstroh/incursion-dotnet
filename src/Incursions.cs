@@ -73,18 +73,21 @@ namespace Jabber
                     if(inc.State != Incursion.State)
                     {
                         inc.State = Incursion.State;
-                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                            string.Format("{0} incursion in {1} (Region: {2}) is now {3}.", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
-                        );
+                        if (Math.Round(IncursionFocus.GetTrueSec(inc.GetSecStatus()), 1) < max_sec)
+                            await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                                string.Format("{0} incursion in {1} (Region: {2}) is now {3}.", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                            );
                     }
 
                     //Boss spotted?
                     if(!inc.HasBoss && Incursion.HasBoss)
                     {
                         inc.HasBoss = Incursion.HasBoss;
-                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                            string.Format("{0} incursion in {1} (Region: {2}) - The mothership has been spotted!", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
-                        );
+
+                        if(Math.Round(IncursionFocus.GetTrueSec(inc.GetSecStatus()), 1) < max_sec)
+                            await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                                string.Format("{0} incursion in {1} (Region: {2}) - The mothership has been deployed!", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                            );
                     }
                 }
                 else
@@ -122,11 +125,12 @@ namespace Jabber
                     if (known_inc.Key == incursions[i].ConstellationId)
                         break;
 
-                    if(i + 1 == incursions.Count)
+                    if(i + 1 == incursions.Count && 
+                        Math.Round(IncursionFocus.GetTrueSec(known_inc.Value.GetSecStatus()), 1) < max_sec)
                     {
                         await JabberClient.Instance.SendGroupMessage(broadcastChannel,
-                                string.Format("{0} incursion {1} (Region: {2}) despawned.",
-                                   known_inc.Value.GetSecType(), known_inc.Value.Constellation.Name, known_inc.Value.RegionName)
+                             string.Format("{0} incursion {1} (Region: {2}) despawned.",
+                               known_inc.Value.GetSecType(), known_inc.Value.Constellation.Name, known_inc.Value.RegionName)
                         );
 
                         dead_incursions.Add(known_inc.Key);

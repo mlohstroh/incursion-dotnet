@@ -112,7 +112,7 @@ namespace Jabber
                                new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                         );
                     }
-                }            
+                }
             }
 
 

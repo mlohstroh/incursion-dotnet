@@ -47,7 +47,7 @@ namespace Jabber
             DateTime now = DateTime.Now;
             Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 5, async () =>
             {
-                Incursions inc = new Incursions();
+                Incursions inc = Incursions.Get();
                 await inc.UpdateIncursions();
                 inc.Set();
             });

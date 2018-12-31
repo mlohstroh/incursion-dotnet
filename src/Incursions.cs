@@ -13,7 +13,7 @@ namespace Jabber
     public class Incursions
     {
         private const string WaitlistRedisKey = "waitlist:incursions";
-        private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
+        private const string broadcastChannel = "incursions@conference.goonfleet.com";
         
         //New Vars
         [JsonProperty]

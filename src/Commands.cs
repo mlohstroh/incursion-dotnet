@@ -1,12 +1,10 @@
-﻿using Matrix.Xmpp.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Matrix.Xmpp;
 using System.Threading.Tasks;
 using Matrix;
-using ESI.NET.Models.Incursions;
 using jabber;
+using System.Net;
 
 namespace Jabber
 {
@@ -18,19 +16,22 @@ namespace Jabber
 
         public static void Register()
         {
-            //Set and get instructions
+            // Set and get instructions
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
             
-            //Get Incursions
+            // Get Incursions
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
 
-            //Add, Remove or List users who have elevated permission with the bot.
+            // Add, Remove or List users who have elevated permission with the bot.
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
             CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
             CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
 
-            //Returns a list of available commands.
+            CommandDispatcher.Instance.RegisterCommand("!esi", EsiStatus);
+            // Define ESI scopes
+
+            // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
         }
 
@@ -244,6 +245,62 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(jid.Bare, message);
+            }
+        }
+
+        public static async Task EsiStatus(Command cmd)
+        {
+            var who = cmd.XmppMessage.From;
+            string response = "Error getting ESI Status information";
+
+            using (WebClient wc = new WebClient())
+            {
+                string EsiStatusUrl = "https://esi.evetech.net/status.json?version=latest";
+
+                var esi_status = wc.DownloadString(EsiStatusUrl);
+
+                EsiScopes[] scopes = Newtonsoft.Json.JsonConvert.DeserializeObject<EsiScopes[]>(esi_status);
+
+                int green = 0; int yellow = 0; int red = 0;
+                foreach(EsiScopes scope in scopes)
+                {
+                    switch (scope.status)
+                    {
+                        case "green":
+                            green++;
+                            break;
+
+                        case "yellow":
+                            yellow++;
+                            break;
+
+                        case "red":
+                            red++;
+                            break;
+                    }
+                }
+
+                response = string.Format("ESI Status - Green: {0} | Yellow: {1} | Red: {2}\n\nErrors with the following scopes may interfere with squad tools: {3}\n {4} ", green.ToString(), yellow.ToString(), red.ToString(), "todo", EsiStatusUrl);
+            }
+            
+
+
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
+            {
+                // Lets get their jid
+                Jid directJid = JabberClient.Instance.GetJidForResource(who?.Resource);
+
+                if (directJid == null)
+                {
+                    Console.WriteLine("[Error] Can't reverse Resource to Jid. Resource: \"{0}\"", who?.Resource);
+                    return;
+                }
+
+                await JabberClient.Instance.SendMessage(directJid, response);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(who.Bare, response);
             }
         }
 

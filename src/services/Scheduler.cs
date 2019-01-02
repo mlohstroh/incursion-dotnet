@@ -7,7 +7,7 @@ namespace jabber
     public class SchedulerService
     {
         private static SchedulerService s_instance;
-        private List<Timer> timers = new List<Timer>();
+        private List<Timer> m_timers = new List<Timer>();
 
         private SchedulerService() {}
 
@@ -33,7 +33,7 @@ namespace jabber
                 task.Invoke();
             }, null, timeToGo, TimeSpan.FromHours(intervalInHour));
 
-            timers.Add(timer);
+            m_timers.Add(timer);
         }
     }
 

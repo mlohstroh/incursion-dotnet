@@ -6,12 +6,12 @@ namespace jabber
 {
     public class SchedulerService
     {
-        private static SchedulerService _instance;
+        private static SchedulerService s_instance;
         private List<Timer> timers = new List<Timer>();
 
         private SchedulerService() {}
 
-        public static SchedulerService Instance => _instance ?? (_instance = new SchedulerService());
+        public static SchedulerService Instance => s_instance ?? (s_instance = new SchedulerService());
 
         public void SchedulerTask(int hour, int min, double intervalInHour, Action task)
         {

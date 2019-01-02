@@ -19,7 +19,7 @@ namespace Jabber
         [JsonProperty]
         private Dictionary<int, IncursionFocus> m_activeIncursions = new Dictionary<int, IncursionFocus>();
         [JsonProperty]
-        private DateTime m_lastChecked;//Timestamp of the last ESI check! Don't do the ESI check if we did it in the last 5 minutes.
+        private DateTime m_lastChecked;
 
         public static Incursions Get()
         {

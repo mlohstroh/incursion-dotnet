@@ -251,38 +251,8 @@ namespace Jabber
         public static async Task EsiStatus(Command cmd)
         {
             var who = cmd.XmppMessage.From;
-            string response = "Error getting ESI Status information";
 
-            using (WebClient wc = new WebClient())
-            {
-                string EsiStatusUrl = "https://esi.evetech.net/status.json?version=latest";
-
-                var esi_status = wc.DownloadString(EsiStatusUrl);
-
-                EsiScopes[] scopes = Newtonsoft.Json.JsonConvert.DeserializeObject<EsiScopes[]>(esi_status);
-
-                int green = 0; int yellow = 0; int red = 0;
-                foreach(EsiScopes scope in scopes)
-                {
-                    switch (scope.status)
-                    {
-                        case "green":
-                            green++;
-                            break;
-
-                        case "yellow":
-                            yellow++;
-                            break;
-
-                        case "red":
-                            red++;
-                            break;
-                    }
-                }
-
-                response = string.Format("ESI Status - Green: {0} | Yellow: {1} | Red: {2}\n\nErrors with the following scopes may interfere with squad tools: {3}\n {4} ", green.ToString(), yellow.ToString(), red.ToString(), "todo", EsiStatusUrl);
-            }
-            
+            EsiScopes esi = EsiScopes.Get();
 
 
             if (cmd.XmppMessage.Type == MessageType.GroupChat)
@@ -296,11 +266,11 @@ namespace Jabber
                     return;
                 }
 
-                await JabberClient.Instance.SendMessage(directJid, response);
+                await JabberClient.Instance.SendMessage(directJid, esi.Status());
             }
             else
             {
-                await JabberClient.Instance.SendMessage(who.Bare, response);
+                await JabberClient.Instance.SendMessage(who.Bare, esi.Status());
             }
         }
 

@@ -51,7 +51,7 @@ namespace jabber
 
             if (m_usersList.ContainsKey(jabber_resource.Trim()))
             {
-                if (requires_admin && m_usersList[jabber_resource].Role == "Admin")
+                if (requires_admin == false || requires_admin == true && m_usersList[jabber_resource].Role == "Admin")
                     return true;
             }            
 

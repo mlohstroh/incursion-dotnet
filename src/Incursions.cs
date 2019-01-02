@@ -13,8 +13,9 @@ namespace Jabber
     public class Incursions
     {
         private const string WaitlistRedisKey = "waitlist:incursions";
-        private const string broadcastChannel = "incursions@conference.goonfleet.com";
-        
+        //private const string broadcastChannel = "incursions@conference.goonfleet.com";
+        private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
+
         //New Vars
         [JsonProperty]
         private Dictionary<int, IncursionFocus> m_activeIncursions = new Dictionary<int, IncursionFocus>();
@@ -73,7 +74,7 @@ namespace Jabber
                     if(inc.State != Incursion.State)
                     {
                         inc.State = Incursion.State;
-                        if (Math.Round(IncursionFocus.GetTrueSec(inc.GetSecStatus()), 1) < max_sec)
+                        if (IsOfInterest(IncursionFocus.GetTrueSec(inc.GetSecStatus()), max_sec))
                             await JabberClient.Instance.SendGroupMessage(broadcastChannel,
                                 string.Format("{0} incursion in {1} (Region: {2}) is now {3}.", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
                             );
@@ -84,7 +85,7 @@ namespace Jabber
                     {
                         inc.HasBoss = Incursion.HasBoss;
 
-                        if(Math.Round(IncursionFocus.GetTrueSec(inc.GetSecStatus()), 1) < max_sec)
+                        if(IsOfInterest(IncursionFocus.GetTrueSec(inc.GetSecStatus()), max_sec))
                             await JabberClient.Instance.SendGroupMessage(broadcastChannel,
                                 string.Format("{0} incursion in {1} (Region: {2}) - The mothership has been deployed!", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
                             );
@@ -105,7 +106,7 @@ namespace Jabber
                     //Store Incursion
                     m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
 
-                    if (Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1) < max_sec)
+                    if (IsOfInterest(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), max_sec))
                     {
                         await JabberClient.Instance.SendGroupMessage(broadcastChannel,
                             string.Format("New {0} Incursion Detected {1} (Region: {2}) - {3} estimated jumps from staging - {4}",
@@ -125,8 +126,7 @@ namespace Jabber
                     if (known_inc.Key == incursions[i].ConstellationId)
                         break;
 
-                    if(i + 1 == incursions.Count && 
-                        Math.Round(IncursionFocus.GetTrueSec(known_inc.Value.GetSecStatus()), 1) < max_sec)
+                    if(i + 1 == incursions.Count && IsOfInterest(IncursionFocus.GetTrueSec(known_inc.Value.GetSecStatus()), max_sec))
                     {
                         await JabberClient.Instance.SendGroupMessage(broadcastChannel,
                              string.Format("{0} incursion {1} (Region: {2}) despawned.",
@@ -162,6 +162,11 @@ namespace Jabber
             }
 
             return incursions;
+        }
+
+        public static bool IsOfInterest(float s_trueSecStatus, float s_maxSecStatus)
+        {
+            return (Math.Round(s_trueSecStatus, 1) < s_maxSecStatus);
         }
     }
 }

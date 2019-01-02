@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace jabber.src.services
+namespace jabber
 {
     public class SchedulerService
     {

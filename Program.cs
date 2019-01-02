@@ -1,4 +1,4 @@
-﻿using jabber.src.services;
+﻿using jabber;
 using System;
 using System.Reactive.Linq;
 using System.Threading;

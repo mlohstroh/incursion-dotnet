@@ -13,7 +13,7 @@ namespace Jabber
     public class Incursions
     {
         private const string WaitlistRedisKey = "waitlist:incursions";
-        private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
+        private const string broadcastChannel = "incursions@conference.goonfleet.com";
         
         //New Vars
         [JsonProperty]
@@ -44,7 +44,7 @@ namespace Jabber
             // run the UpdateIncursions method.
             if(true)
             {
-                await UpdateIncursionsAsync();
+                await UpdateIncursions();
                 //m_lastChecked = DateTime.UtcNow;
                 //this.Set();
             }
@@ -54,7 +54,7 @@ namespace Jabber
         /// <summary>
         /// Gets incursions using ESI and updates our list.
         /// </summary>
-        public async Task UpdateIncursionsAsync()
+        public async Task UpdateIncursions()
         {
             //ESI Lookup
             List<Incursion> incursions = await EsiWrapper.GetIncursions();
@@ -112,7 +112,7 @@ namespace Jabber
                                new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                         );
                     }
-                }            
+                }
             }
 
 

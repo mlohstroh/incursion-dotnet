@@ -83,7 +83,11 @@ namespace jabber
         public string SetScopes(string scopes)
         {
             // Clear the old list of scopes.
-            m_squadScopes.Clear();
+            if (m_squadScopes != null)
+                m_squadScopes.Clear();
+            else
+                m_squadScopes = new List<string>();
+                
 
             // Create a list of scopes
             // Use comma separated user input
@@ -92,7 +96,7 @@ namespace jabber
                 m_squadScopes.Add(scope.Trim().ToLower());
             
             // Save changes
-            this.Set();
+            Set();
 
             return string.Format("Scopes updated.");
         }

@@ -29,7 +29,7 @@ namespace Jabber
             CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
 
             CommandDispatcher.Instance.RegisterCommand("!esi", EsiStatus);
-            // Define ESI scopes
+            CommandDispatcher.Instance.RegisterCommand("!setscopes", SetEsiScopes);
 
             // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
@@ -271,6 +271,46 @@ namespace Jabber
             else
             {
                 await JabberClient.Instance.SendMessage(who.Bare, esi.Status());
+            }
+        }
+
+        public static async Task SetEsiScopes(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            EsiScopes esi = EsiScopes.Get();
+            string message = PermissionDenied;
+
+            if (Users.Get().CheckUser(author, true))
+            {
+                // Get an array of scopes.
+                // Scope format esi-fleets,esi-ui
+                string[] parts = cmd.Args.Trim().Split(" ")[0].Split(",");
+                string scopesString = "";
+
+                foreach(string s in parts)
+                {
+                    scopesString += parts + ",";
+                }
+                esi.SetScopes(scopesString.Substring(0, scopesString.Length -1));
+                esi.Set();
+
+                message = "Squad ESI Scopes set.";
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
             }
         }
 

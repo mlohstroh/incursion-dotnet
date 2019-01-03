@@ -95,7 +95,7 @@ namespace Jabber
                     catch(Exception ex)
                     {
                         // Take this out at launch
-                        Debugger.Break();
+                        //Debugger.Break();
                     }
                 }
             }

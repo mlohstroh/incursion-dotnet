@@ -1,12 +1,10 @@
-﻿using Matrix.Xmpp.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Matrix.Xmpp;
 using System.Threading.Tasks;
 using Matrix;
-using ESI.NET.Models.Incursions;
 using jabber;
+using System.Net;
 
 namespace Jabber
 {
@@ -18,19 +16,22 @@ namespace Jabber
 
         public static void Register()
         {
-            //Set and get instructions
+            // Set and get instructions
             CommandDispatcher.Instance.RegisterCommand("!instructions", GetInstructions);
             CommandDispatcher.Instance.RegisterCommand("!setinstructions", SetInstructions);
             
-            //Get Incursions
+            // Get Incursions
             CommandDispatcher.Instance.RegisterCommand("!incursions", GetIncursions);
 
-            //Add, Remove or List users who have elevated permission with the bot.
+            // Add, Remove or List users who have elevated permission with the bot.
             CommandDispatcher.Instance.RegisterCommand("!adduser", SetUser);
             CommandDispatcher.Instance.RegisterCommand("!listusers", ListUsers);
             CommandDispatcher.Instance.RegisterCommand("!removeuser", RemoveUser);
 
-            //Returns a list of available commands.
+            CommandDispatcher.Instance.RegisterCommand("!esi", EsiStatus);
+            CommandDispatcher.Instance.RegisterCommand("!setscopes", SetEsiScopes);
+
+            // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
         }
 
@@ -237,6 +238,72 @@ namespace Jabber
                 {
                     message = "Do not include @goonfleet.com in the targets username.";
                 }
+            }
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(jid.Bare, message);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(jid.Bare, message);
+            }
+        }
+
+        public static async Task EsiStatus(Command cmd)
+        {
+            var who = cmd.XmppMessage.From;
+
+            EsiScopes esi = EsiScopes.Get();
+
+
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
+            {
+                // Lets get their jid
+                Jid directJid = JabberClient.Instance.GetJidForResource(who?.Resource);
+
+                if (directJid == null)
+                {
+                    Console.WriteLine("[Error] Can't reverse Resource to Jid. Resource: \"{0}\"", who?.Resource);
+                    return;
+                }
+
+                await JabberClient.Instance.SendMessage(directJid, esi.Status());
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(who.Bare, esi.Status());
+            }
+        }
+
+        public static async Task SetEsiScopes(Command cmd)
+        {
+            var jid = cmd.XmppMessage.From;
+            var author = jid.User;
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                author = jid.Resource;
+            }
+
+            EsiScopes esi = EsiScopes.Get();
+            string message = PermissionDenied;
+
+            if (Users.Get().CheckUser(author, true))
+            {
+                // Get an array of scopes.
+                // Scope format esi-fleets,esi-ui
+                string[] parts = cmd.Args.Trim().Split(" ")[0].Split(",");
+                string scopesString = "";
+
+                foreach(string s in parts)
+                {
+                    scopesString += s + ",";
+                }
+                esi.SetScopes(scopesString.Substring(0, scopesString.Length -1));
+                esi.Set();
+
+                message = "Squad ESI Scopes set.";
             }
 
             if (cmd.XmppMessage.IsGroupMessage())

@@ -298,7 +298,7 @@ namespace Jabber
 
                 foreach(string s in parts)
                 {
-                    scopesString += parts + ",";
+                    scopesString += s + ",";
                 }
                 esi.SetScopes(scopesString.Substring(0, scopesString.Length -1));
                 esi.Set();

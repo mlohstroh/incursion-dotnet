@@ -13,8 +13,9 @@ namespace Jabber
     public class Incursions
     {
         private const string WaitlistRedisKey = "waitlist:incursions";
+        //private const string broadcastChannel = "incursions@conference.goonfleet.com";
         private const string broadcastChannel = "incursion_bot_testing@conference.goonfleet.com";
-        
+
         //New Vars
         [JsonProperty]
         private Dictionary<int, IncursionFocus> m_activeIncursions = new Dictionary<int, IncursionFocus>();
@@ -42,11 +43,12 @@ namespace Jabber
         {
             // If we haven't checked incursions in the last five minutes
             // run the UpdateIncursions method.
-            if(true)
+            if(m_lastChecked == DateTime.MinValue || m_lastChecked.AddMinutes(5) < DateTime.UtcNow)
             {
-                await UpdateIncursionsAsync();
-                //m_lastChecked = DateTime.UtcNow;
-                this.Set();
+                Console.Beep();
+                await UpdateIncursions();
+                m_lastChecked = DateTime.UtcNow;
+                
             }
 
         }
@@ -54,17 +56,40 @@ namespace Jabber
         /// <summary>
         /// Gets incursions using ESI and updates our list.
         /// </summary>
-        public async Task UpdateIncursionsAsync()
+        public async Task UpdateIncursions()
         {
             //ESI Lookup
             List<Incursion> incursions = await EsiWrapper.GetIncursions();
-            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
 
             foreach (var Incursion in incursions)
             {
                 if(m_activeIncursions.ContainsKey(Incursion.ConstellationId))
                 {
-                    Console.Beep();// Update incursion
+                    IncursionFocus inc = m_activeIncursions[Incursion.ConstellationId];
+
+                    //Update Influence.
+                    inc.Influence = Incursion.Influence;
+
+                    //Status
+                    if(inc.State != Incursion.State)
+                    {
+                        inc.State = Incursion.State;
+                        if (IsOfInterest(inc.GetTrueSec()))
+                            await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                                string.Format("{0} incursion in {1} (Region: {2}) is now {3}.", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                            );
+                    }
+
+                    //Boss spotted?
+                    if(!inc.HasBoss && Incursion.HasBoss)
+                    {
+                        inc.HasBoss = Incursion.HasBoss;
+
+                        if(IsOfInterest(inc.GetTrueSec()))
+                            await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                                string.Format("{0} incursion in {1} (Region: {2}) - The mothership has been deployed!", inc.GetSecType(), inc.Constellation.Name, inc.RegionName, Incursion.State)
+                            );
+                    }
                 }
                 else
                 {
@@ -81,17 +106,42 @@ namespace Jabber
                     //Store Incursion
                     m_activeIncursions.Add(new_incursion.Constellation.Id, new_incursion);
 
-                    if (Math.Round(IncursionFocus.GetTrueSec(new_incursion.GetSecStatus()), 1) < max_sec)
+                    if (IsOfInterest(new_incursion.GetSecStatus()))
                     {
                         await JabberClient.Instance.SendGroupMessage(broadcastChannel,
                             string.Format("New {0} Incursion Detected {1} (Region: {2}) - {3} estimated jumps from staging - {4}",
                                new_incursion.GetSecType().ToLower(), new_incursion.Constellation.Name, new_incursion.RegionName, await new_incursion.GetDistanceFromStaging(), new_incursion.Dotlan())
                         );
                     }
-                }               
+                }
             }
 
-            //Compare incursions and look for changes. Push strings to a list of changes.
+
+            //Foreach in dic if not in libary delete
+            List<int> dead_incursions = new List<int>();
+            foreach (KeyValuePair<int, IncursionFocus> known_inc in m_activeIncursions)
+            {
+                for (int i = 0; i < incursions.Count; i++)
+                {
+                    if (known_inc.Key == incursions[i].ConstellationId)
+                        break;
+
+                    if(i + 1 == incursions.Count && IsOfInterest(known_inc.Value.GetSecStatus()))
+                    {
+                        await JabberClient.Instance.SendGroupMessage(broadcastChannel,
+                             string.Format("{0} incursion {1} (Region: {2}) despawned.",
+                               known_inc.Value.GetSecType(), known_inc.Value.Constellation.Name, known_inc.Value.RegionName)
+                        );
+
+                        dead_incursions.Add(known_inc.Key);
+                    }
+                }
+            }
+
+            foreach (int delete in dead_incursions)
+                m_activeIncursions.Remove(delete);
+
+            this.Set();
         }
 
         /// <summary>
@@ -107,11 +157,17 @@ namespace Jabber
             string incursions = "";
             foreach(KeyValuePair<int, IncursionFocus> inc in m_activeIncursions)
             {
-                if(Math.Round(IncursionFocus.GetTrueSec(inc.Value.GetSecStatus()), 1) < max_sec)
+                if(IsOfInterest(inc.Value.GetTrueSec()))
                     incursions += string.Format("\n{0}", inc.Value.ToString());
             }
 
             return incursions;
+        }
+
+        public static bool IsOfInterest(float s_trueSecStatus)
+        {
+            Config.GetFloat("SEC_STATUS_CEILING", out float max_sec);
+            return (Math.Round(s_trueSecStatus, 1) < max_sec);
         }
     }
 }
@@ -182,10 +238,9 @@ public class IncursionFocus
     /// Returns the security type of the system 
     /// from the GetSecStatus() method.
     /// </summary>
-    /// <returns></returns>
     public string GetSecType()
     {
-        float security_status = GetTrueSec(GetSecStatus());
+        float security_status = GetTrueSec();
         if (Math.Round(security_status, 1) >= 0.5)
         {
             return "Highsec";
@@ -209,13 +264,18 @@ public class IncursionFocus
         return 0;
     }
 
-    public static float GetTrueSec(float SecurityStatus)
+    /// <summary>
+    /// Gets the true security status of a system.
+    /// </summary>
+    public float GetTrueSec()
     {
-        if(SecurityStatus > 0.0 || SecurityStatus < 0.05)
+        float SecurityStatus = GetSecStatus();
+
+        if (SecurityStatus > 0.0 || SecurityStatus < 0.05)
         {
             float temp = (float)Math.Ceiling(SecurityStatus * 100);
             return (float)temp / 100;
-            
+
         }
 
         return (float)Math.Round(SecurityStatus, 2);
@@ -228,6 +288,6 @@ public class IncursionFocus
 
     public override string ToString()
     {
-        return string.Format("{0} incursion in {1} (Region: {2}) {3:0.0}%  influence - {4} est. jumps from staging - {5}", GetSecType(), Constellation.Name, RegionName, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
+        return string.Format("{0} incursion in {1} (Region: {2}) {3}: {4:0.0}%  influence - {5} est. jumps from staging - {6}", GetSecType(), Constellation.Name, RegionName, State, 100 - (Influence * 100), GetDistanceFromStaging().Result, Dotlan());
     }
 }

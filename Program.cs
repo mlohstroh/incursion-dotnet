@@ -1,4 +1,5 @@
-﻿using System;
+using jabber;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,9 +20,9 @@ namespace Jabber
             JabberClient.Instance.OnJabberConnected += async delegate ()
             {
                 await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
-                //await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
-                //await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
-                //await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
+                await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
+                await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
+                await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
             };
 
             Commands.Register();
@@ -41,6 +42,14 @@ namespace Jabber
 
             jabberTask.Start();
             commandTask.Start();
+
+            DateTime now = DateTime.Now;
+            Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 5, async () =>
+            {
+                Incursions inc = Incursions.Get();
+                await inc.UpdateIncursions();
+                inc.Set();
+            });
 
             // Wait for signal from other thread
             threadBlocker.WaitOne();

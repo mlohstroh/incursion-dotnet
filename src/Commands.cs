@@ -105,26 +105,28 @@ namespace Jabber
 
         public static async Task GetIncursions(Command cmd)
         {
-            var jid = cmd.XmppMessage.From;
-            var author = jid.User;
+            var who = cmd.XmppMessage.From;
 
-            if (cmd.XmppMessage.IsGroupMessage())
-            {
-                author = jid.Resource;
-            }
-
-            
             Incursions incursionClass = Incursions.Get();
             await incursionClass.CheckIncursions();
             incursionClass.Set();
 
-            if (cmd.XmppMessage.IsGroupMessage())
+            if (cmd.XmppMessage.Type == MessageType.GroupChat)
             {
-                await JabberClient.Instance.SendGroupMessage(jid.Bare, incursionClass.ToString());
+                // Lets get their jid
+                Jid directJid = JabberClient.Instance.GetJidForResource(who?.Resource);
+
+                if (directJid == null)
+                {
+                    Console.WriteLine("[Error] Can't reverse Resource to Jid. Resource: \"{0}\"", who?.Resource);
+                    return;
+                }
+
+                await JabberClient.Instance.SendMessage(directJid, incursionClass.ToString());
             }
             else
             {
-                await JabberClient.Instance.SendMessage(jid.Bare, incursionClass.ToString());
+                await JabberClient.Instance.SendMessage(who.Bare, incursionClass.ToString());
             }
         }
 

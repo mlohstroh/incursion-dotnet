@@ -1,7 +1,12 @@
 using jabber;
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using uhttpsharp;
+using uhttpsharp.Listeners;
+using uhttpsharp.RequestProviders;
 
 namespace Jabber
 {
@@ -19,7 +24,7 @@ namespace Jabber
 
             JabberClient.Instance.OnJabberConnected += async delegate ()
             {
-                await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
+                //await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
                 await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
                 await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
                 await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
@@ -51,8 +56,22 @@ namespace Jabber
                 inc.Set();
             });
 
-            // Wait for signal from other thread
-            threadBlocker.WaitOne();
+
+            using(var httpServer = new HttpServer(new HttpRequestProvider()))
+            {
+                Config.GetInt("http_port", out int port);
+                httpServer.Use(new TcpListenerAdapter(new TcpListener(IPAddress.Loopback, port)));
+
+                // Request handling : 
+                httpServer.Use((context, next) => {
+                    return next();
+                });
+
+                httpServer.Start();
+
+                // Wait for signal from other thread
+                threadBlocker.WaitOne();
+            }
 
             // Block
             JabberClient.Instance.Disconnect().GetAwaiter().GetResult();

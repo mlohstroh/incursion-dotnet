@@ -10,4 +10,4 @@ RUN dotnet restore
 RUN dotnet publish -o exe
 WORKDIR /app/exe
 
-ENTRYPOINT ["dotnet", "jabber.dll"]
+CMD ["dotnet", "jabber.dll"]

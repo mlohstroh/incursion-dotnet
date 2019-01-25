@@ -62,8 +62,19 @@ namespace Jabber
             JabberClient.Instance.Disconnect().GetAwaiter().GetResult();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+        {
+            // Get listen urls by default
+            string listenUrl = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+            int port = 5000;
+            if(Config.GetInt("PORT", out port))
+            {
+                listenUrl = string.Format("http://*:{0};https://*:{1}", port, port + 1);
+            }
+
+            return WebHost.CreateDefaultBuilder(args)
+                .UseUrls(listenUrl)
                 .UseStartup<Startup>();
+        }
     }
 }

@@ -1,4 +1,4 @@
-using jabber;
+﻿using jabber;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using System;
@@ -23,10 +23,10 @@ namespace Jabber
 
             JabberClient.Instance.OnJabberConnected += async delegate ()
             {
-                //await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
+                await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
+                // await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
+                // await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
+                // await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
             };
 
             Commands.Register();

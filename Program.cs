@@ -1,12 +1,11 @@
 using jabber;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using uhttpsharp;
-using uhttpsharp.Listeners;
-using uhttpsharp.RequestProviders;
 
 namespace Jabber
 {
@@ -14,13 +13,13 @@ namespace Jabber
     {
         static void Main(string[] args)
         {
-            ManualResetEvent threadBlocker = new ManualResetEvent(false);
+            // ManualResetEvent threadBlocker = new ManualResetEvent(false);
 
-            // Wait for control+c
-            Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
-            {
-                threadBlocker.Set();
-            };
+            // // Wait for control+c
+            // Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
+            // {
+            //     threadBlocker.Set();
+            // };
 
             JabberClient.Instance.OnJabberConnected += async delegate ()
             {
@@ -57,24 +56,14 @@ namespace Jabber
             });
 
 
-            using(var httpServer = new HttpServer(new HttpRequestProvider()))
-            {
-                Config.GetInt("http_port", out int port);
-                httpServer.Use(new TcpListenerAdapter(new TcpListener(IPAddress.Loopback, port)));
-
-                // Request handling : 
-                httpServer.Use((context, next) => {
-                    return next();
-                });
-
-                httpServer.Start();
-
-                // Wait for signal from other thread
-                threadBlocker.WaitOne();
-            }
+            CreateWebHostBuilder(args).Build().Run();
 
             // Block
             JabberClient.Instance.Disconnect().GetAwaiter().GetResult();
         }
+
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+            WebHost.CreateDefaultBuilder(args)
+                .UseStartup<Startup>();
     }
 }

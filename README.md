@@ -13,8 +13,8 @@ Application Requirements
 
 1. Grab the [latest release](https://github.com/mlohstroh/incursion-dotnet/releases).
 2. Extract the content of the zip file into the working directory.
-3. Create an .ENV file and fill out the vales _([See Below]())_.
-3. Create a systemd.service _([See Below]())_.
+3. Create an .ENV file and fill out the vales _([See Below](#environment-variables))_.
+3. Create a systemd.service _([See Below](#systemctl-service---for-ubuntu))_.
 4. Enable the service and reboot the box to test it functions correctly `sudo reboot`.
 
 

@@ -19,10 +19,15 @@
     <None Update=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="scripts\launch">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="scripts\" />
+	<Folder Include="scripts\">
+		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Folder>		
   </ItemGroup>
 
 </Project>

@@ -59,8 +59,8 @@ Documentation=https://github.com/mlohstroh/incursion-dotnet
 [Service]
 Type=simple
 
-WorkingDirectory=/opt/incursion-bot/run/publish
-ExecStart=/opt/incursion-bot/image/scripts/launch
+WorkingDirectory=/opt/incursion-bot/
+ExecStart=sh /opt/incursion-bot/image/scripts/launch
 
 RestartSec=2
 Restart=on-failure

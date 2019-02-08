@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#vars
+BASEDIR="/opt/incursion-bot/"
+RUNDIR="/opt/incursion-bot/run/"
+IMAGEDIR="/opt/incursion-bot/image/"
+EXECFILE="jabber.dll"
+
+# Remove the content of the
+rm -rf $RUNDIR*
+mkdir $RUNDIR
+cp -r $IMAGEDIR* $RUNDIR
+cd $RUNDIR/publish
+
+dotnet $EXECFILE

@@ -13,20 +13,12 @@ namespace Jabber
     {
         static void Main(string[] args)
         {
-            // ManualResetEvent threadBlocker = new ManualResetEvent(false);
-
-            // // Wait for control+c
-            // Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
-            // {
-            //     threadBlocker.Set();
-            // };
-
             JabberClient.Instance.OnJabberConnected += async delegate ()
             {
-                //await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
-                await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
+                await JabberClient.Instance.JoinRoom("incursion_bot_testing@conference.goonfleet.com");
+                //await JabberClient.Instance.JoinRoom("incursion-leadership@conference.goonfleet.com");
+                //await JabberClient.Instance.JoinRoom("fcincursions@conference.goonfleet.com");
+                //await JabberClient.Instance.JoinRoom("incursions@conference.goonfleet.com");
             };
 
             Commands.Register();
@@ -48,11 +40,23 @@ namespace Jabber
             commandTask.Start();
 
             DateTime now = DateTime.Now;
+
+            // Updates incursions every five minutes.
             Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 5, async () =>
             {
                 Incursions inc = Incursions.Get();
                 await inc.UpdateIncursions();
                 inc.Set();
+            });
+
+            // Checks for application updates every 60 minutes
+            // If an update is pending - update the software.
+            Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 1, () =>
+            {
+                if (UpdateManager.UpdatePending())
+                {
+                    // Update things here?
+                }
             });
 
 

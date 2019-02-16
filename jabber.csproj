@@ -13,11 +13,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ESI.NET" Version="2.4.1" />
-    <PackageReference Include="Matrix.vNext" Version="2.1.0" />
-    <PackageReference Include="Matrix.vNext.Extensions" Version="2.1.0" />
-    <PackageReference Include="Matrix.vNext.Srv" Version="2.1.0" />
+    <PackageReference Include="ESI.NET" Version="2.7.6" />
+    <PackageReference Include="Matrix.vNext" Version="2.2.0" />
+    <PackageReference Include="Matrix.vNext.Extensions" Version="2.2.0" />
+    <PackageReference Include="Matrix.vNext.Srv" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Octokit" Version="0.32.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.0.519" />
   </ItemGroup>
 

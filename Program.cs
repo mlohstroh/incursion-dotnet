@@ -51,7 +51,7 @@ namespace Jabber
 
             // Checks for application updates every 60 minutes
             // If an update is pending - update the software.
-            Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 1, () =>
+            Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 15, () =>
             {
                 if (UpdateManager.UpdatePending())
                 {

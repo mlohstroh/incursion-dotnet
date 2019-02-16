@@ -44,10 +44,10 @@ namespace Jabber
             Config.GetString("GITHUB_TOKEN", out string token);
             client.Credentials = new Credentials(token);
 
-            var releases = await client.Repository.Release.GetAll(1401488693436528);
+            var releases = await client.Repository.Release.GetAll("mlohstroh", "incursion-dotnet");
             var latest = releases[0];
 
-            System.Diagnostics.Debug.WriteLine(latest);
+            System.Diagnostics.Debug.WriteLine(latest.Name);
             Console.Beep();
 
 
@@ -65,7 +65,7 @@ namespace Jabber
         internal static bool UpdatePending()
         {
             var latestGithubVersion = UpdateManager.GetApplicationVersion();
-            var ApplicationVersion = UpdateManager.GetGithubReleaseVersionAsync();
+            string ApplicationVersion = UpdateManager.GetGithubReleaseVersionAsync().Result;
 
             // Error and abort if we cannot get a github or application version
             if(latestGithubVersion ==  null || ApplicationVersion == null)
@@ -78,11 +78,19 @@ namespace Jabber
             }
 
             // If the current version and github versions do not match - Flag for updates.
-            //if(latestGithubVersion != ApplicationVersion)
+            if(latestGithubVersion != ApplicationVersion)
                 return true;
 
             // No Update required.
             return false;
+        }
+
+        static void DoUpdate(string newVersion)
+        {
+            // download latest release zip
+            // unzip to temp directory
+            // replace all files in temp directory to install directory
+            // die
         }
     }
 }

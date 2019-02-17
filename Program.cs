@@ -49,14 +49,12 @@ namespace Jabber
                 inc.Set();
             });
 
+            UpdateManager updateManager = new UpdateManager();
             // Checks for application updates every 60 minutes
             // If an update is pending - update the software.
             Scheduler.IntervalInMinutes(now.Hour, now.Minute + 1, 15, () =>
             {
-                if (UpdateManager.UpdatePending())
-                {
-                    // Update things here?
-                }
+                updateManager.HandleUpdate();
             });
 
 

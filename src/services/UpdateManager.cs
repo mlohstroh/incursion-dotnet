@@ -2,17 +2,44 @@
 using Octokit;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Net;
+using System.IO;
+using System.ComponentModel;
+using System.IO.Compression;
 
 namespace Jabber
 {
-    internal class UpdateManager
+    public class UpdateManager
     {
+        private const int UpdateExitCode = 9567;
+
+        private GitHubClient m_client;
+
+        public UpdateManager()
+        {
+            CreateGithubClient();
+        }
+
+        private void CreateGithubClient()
+        {
+            if(m_client != null)
+                return;
+
+            // Github Client.
+            var client = new GitHubClient(new ProductHeaderValue("samuel-grant"));
+
+            // Authorised Repo access.
+            Config.GetString("GITHUB_TOKEN", out string token);
+            client.Credentials = new Credentials(token);
+
+            m_client = client;
+        }
 
         /// <summary>
         /// Returns the application version as stored in the assembly file
         /// </summary>
         /// <returns>string version</returns>
-        internal static string GetApplicationVersion()
+        private string GetApplicationVersion()
         {
             try
             {
@@ -35,16 +62,9 @@ namespace Jabber
         /// Returns the latest github release version
         /// </summary>
         /// <returns>string version</returns>
-        internal static async Task<string> GetGithubReleaseVersionAsync()
+        private async Task<Release> GetGithubReleaseVersionAsync()
         {
-            // Github Client.
-            var client = new GitHubClient(new ProductHeaderValue("samuel-grant"));
-
-            // Authorised Repo access.
-            Config.GetString("GITHUB_TOKEN", out string token);
-            client.Credentials = new Credentials(token);
-
-            var releases = await client.Repository.Release.GetAll("mlohstroh", "incursion-dotnet");
+            var releases = await m_client.Repository.Release.GetAll("mlohstroh", "incursion-dotnet");
             var latest = releases[0];
 
             System.Diagnostics.Debug.WriteLine(latest.Name);
@@ -52,7 +72,7 @@ namespace Jabber
 
 
             if (latest != null)
-                return latest.TagName;
+                return latest;
 
             return null;
         }
@@ -61,36 +81,73 @@ namespace Jabber
         /// <summary>
         /// Checks to see if an update is required.
         /// </summary>
-        /// <returns>bool UpdateRequired</returns>
-        internal static bool UpdatePending()
+        public void HandleUpdate()
         {
-            var latestGithubVersion = UpdateManager.GetApplicationVersion();
-            string ApplicationVersion = UpdateManager.GetGithubReleaseVersionAsync().Result;
+            var currentVersion = GetApplicationVersion();
+            Release applicationVersion = GetGithubReleaseVersionAsync().Result;
 
             // Error and abort if we cannot get a github or application version
-            if(latestGithubVersion ==  null || ApplicationVersion == null)
+            if(currentVersion ==  null || applicationVersion == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(string.Format("Error checking for updates"));
                 Console.ForegroundColor = ConsoleColor.White;
 
-                return false;
+                return;
             }
 
             // If the current version and github versions do not match - Flag for updates.
-            if(latestGithubVersion != ApplicationVersion)
-                return true;
-
-            // No Update required.
-            return false;
+            if(currentVersion != applicationVersion.TagName)
+            {
+                DoUpdate(applicationVersion);
+            }
         }
 
-        static void DoUpdate(string newVersion)
+        private void DoUpdate(Release latestRelease)
         {
-            // download latest release zip
+            if(File.Exists(GetTempDownloadFilePath()))
+            {
+                File.Delete(GetTempDownloadFilePath());
+            }
+
+            WebClient client = new WebClient();
+            // Add callback
+            client.DownloadFileCompleted += new AsyncCompletedEventHandler (FinishUpdateAfterDownload);
+            // Initiate download
+            client.DownloadFileAsync(new Uri(latestRelease.ZipballUrl), GetTempDownloadFilePath());
+        }
+
+        private void FinishUpdateAfterDownload(object sender, AsyncCompletedEventArgs e)
+        {
+            string extractDir = Path.Combine(Path.GetTempFileName(), "temp-update");
             // unzip to temp directory
-            // replace all files in temp directory to install directory
-            // die
+            ZipFile.ExtractToDirectory(GetTempDownloadFilePath(), extractDir);
+
+            string currentDirectory = Environment.CurrentDirectory;
+
+            // Check our config to make sure 
+            if(!Config.GetString("IS_DEPLOYMENT", out string testString))
+            {
+                // do nothing
+                return;
+            }
+
+            // Otherwise, lets do extremely destructive actions. yay...
+
+            string[] filePaths = Directory.GetFiles(extractDir);
+            for(int i = 0; i < filePaths.Length; i++)
+            {
+                // what can possibly go wrong
+                File.Copy(filePaths[i], currentDirectory, true);
+            }
+
+            // Die
+            Environment.Exit(UpdateExitCode);
+        }
+
+        private string GetTempDownloadFilePath()
+        {
+            return Path.Combine(Path.GetTempPath(), "temp-update.zip");
         }
     }
 }

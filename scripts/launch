@@ -11,7 +11,7 @@ UPDATE_EXIT_CODE=9567
 rm -rf $RUNDIR*
 mkdir $RUNDIR
 cp -r $IMAGEDIR* $RUNDIR
-cd $RUNDIR/publish
+cd $RUNDIR
 
 IS_DEPLOYMENT=true dotnet $EXECFILE
 

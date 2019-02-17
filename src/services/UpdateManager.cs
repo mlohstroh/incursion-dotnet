@@ -2,18 +2,21 @@
 using Octokit;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Net;
 using System.IO;
 using System.ComponentModel;
 using System.IO.Compression;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace Jabber
 {
     public class UpdateManager
     {
         private const int UpdateExitCode = 9567;
+        private const string ReleaseZipName = "release.zip";
 
         private GitHubClient m_client;
+        private string m_githubToken;
 
         public UpdateManager()
         {
@@ -26,11 +29,11 @@ namespace Jabber
                 return;
 
             // Github Client.
-            var client = new GitHubClient(new ProductHeaderValue("samuel-grant"));
+            var client = new GitHubClient(new Octokit.ProductHeaderValue("samuel-grant"));
 
             // Authorised Repo access.
-            Config.GetString("GITHUB_TOKEN", out string token);
-            client.Credentials = new Credentials(token);
+            Config.GetString("GITHUB_TOKEN", out m_githubToken);
+            client.Credentials = new Credentials(m_githubToken);
 
             m_client = client;
         }
@@ -99,29 +102,48 @@ namespace Jabber
             // If the current version and github versions do not match - Flag for updates.
             if(currentVersion != applicationVersion.TagName)
             {
-                DoUpdate(applicationVersion);
+                DoUpdate(applicationVersion).Wait();
             }
         }
 
-        private void DoUpdate(Release latestRelease)
+        private async Task DoUpdate(Release latestRelease)
         {
-            if(File.Exists(GetTempDownloadFilePath()))
+            string tempPath = GetTempDownloadFilePath();
+
+            if(File.Exists(tempPath))
             {
-                File.Delete(GetTempDownloadFilePath());
+                File.Delete(tempPath);
             }
 
-            WebClient client = new WebClient();
-            // Add callback
-            client.DownloadFileCompleted += new AsyncCompletedEventHandler (FinishUpdateAfterDownload);
-            // Initiate download
-            client.DownloadFileAsync(new Uri(latestRelease.ZipballUrl), GetTempDownloadFilePath());
-        }
+            var handler = new HttpClientHandler() 
+            {
+                AllowAutoRedirect = true
+            };
 
-        private void FinishUpdateAfterDownload(object sender, AsyncCompletedEventArgs e)
-        {
-            string extractDir = Path.Combine(Path.GetTempFileName(), "temp-update");
+            HttpClient client = new HttpClient(handler);
+
+            client.DefaultRequestHeaders.Add("User-Agent", "incursion-dotnet/1.0");
+            client.DefaultRequestHeaders.Add("Accept", "application/octet-stream");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", m_githubToken);
+            var assets = latestRelease.Assets;
+            string chosenUrl = "";
+
+
+            foreach(var asset in assets)
+            {
+                if(asset.Name == ReleaseZipName)
+                {
+                    chosenUrl = asset.BrowserDownloadUrl;
+                }
+            }
+            
+            byte[] bytes = await client.GetByteArrayAsync(chosenUrl);
+
+            File.WriteAllBytes(tempPath, bytes);
+
+            string extractDir = Path.Combine(Path.GetTempPath(), "temp-update");
             // unzip to temp directory
-            ZipFile.ExtractToDirectory(GetTempDownloadFilePath(), extractDir);
+            ZipFile.ExtractToDirectory(tempPath, extractDir);
 
             string currentDirectory = Environment.CurrentDirectory;
 

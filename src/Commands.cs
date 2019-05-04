@@ -34,10 +34,10 @@ namespace Jabber
             // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
 
-            CommandDispatcher.Instance.RegisterCommand("!iping", Test);
+            CommandDispatcher.Instance.RegisterCommand("!iping", Ping);
         }
 
-        public static async Task Test(Command cmd)
+        public static async Task Ping(Command cmd)
         {
             var who = cmd.XmppMessage.From;
 

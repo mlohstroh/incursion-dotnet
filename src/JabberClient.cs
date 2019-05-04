@@ -260,5 +260,10 @@ namespace Jabber
                 m_rooms[jid] = existing;
             }
         }
+
+        internal object GetJidsInRoom(object user)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

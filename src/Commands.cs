@@ -41,20 +41,25 @@ namespace Jabber
         {
             var who = cmd.XmppMessage.From;
 
-            if (cmd.XmppMessage.From.User == "fcincursions")
+            string target = cmd.Args.Trim().ToLower();
+            if (target == "all")
+                Broadcast.All(cmd);
+
+            if (target == "fc")
+                Broadcast.ToFcs(cmd);
+
+            if (target == "leadership")
+                Broadcast.ToLeadership(cmd);
+
+            string response = string.Format("Invalid ping target. |  Syntax !iping {{target}} | Available targets: {0} {1} {2}\nNot all targets will be available.", "fc", "leadership", "");
+
+            if (cmd.XmppMessage.IsGroupMessage())
             {
-                var res = JabberClient.Instance.GetJidsInRoom(cmd.XmppMessage.From.User);
-                List<string> names = new List<string>();
-
-                foreach(var kvp in res)
-                {
-                    if (!names.Contains(kvp.Value.User))
-                    {
-                        names.Add(kvp.Value.User);
-                    }
-                }
-
-                await JabberClient.Instance.SendGroupMessage(cmd.XmppMessage.From.Bare, String.Join(" ", names));
+                await JabberClient.Instance.SendGroupMessage(who.Bare, response);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(who.Bare, response);
             }
         }
 

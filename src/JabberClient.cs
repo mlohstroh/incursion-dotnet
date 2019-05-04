@@ -224,6 +224,19 @@ namespace Jabber
             return null;
         }
 
+        public Dictionary<string, Jid> GetJidsInRoom(string room = "incursion_bot_testing")
+        {
+            foreach (var kvp in m_rooms)
+            {
+                if(kvp.Key == room)
+                {
+                    return kvp.Value.m_resourcesToJids;
+                }
+            }
+
+            return null;
+        }
+
         private void TrackPresenceForRooms(Presence p)
         {
             foreach(var kvp in m_rooms)

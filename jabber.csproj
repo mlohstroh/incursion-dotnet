@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ESI.NET" Version="2.7.6" />
+    <PackageReference Include="ESI.NET" Version="2.13.13" />
     <PackageReference Include="Matrix.vNext" Version="2.2.0" />
     <PackageReference Include="Matrix.vNext.Extensions" Version="2.2.0" />
     <PackageReference Include="Matrix.vNext.Srv" Version="2.2.0" />

@@ -33,6 +33,29 @@ namespace Jabber
 
             // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
+
+            CommandDispatcher.Instance.RegisterCommand("!iping", Test);
+        }
+
+        public static async Task Test(Command cmd)
+        {
+            var who = cmd.XmppMessage.From;
+
+            if (cmd.XmppMessage.From.User == "fcincursions")
+            {
+                var res = JabberClient.Instance.GetJidsInRoom(cmd.XmppMessage.From.User);
+                List<string> names = new List<string>();
+
+                foreach(var kvp in res)
+                {
+                    if (!names.Contains(kvp.Value.User))
+                    {
+                        names.Add(kvp.Value.User);
+                    }
+                }
+
+                await JabberClient.Instance.SendGroupMessage(cmd.XmppMessage.From.Bare, String.Join(" ", names));
+            }
         }
 
         public static async Task GetInstructions(Command cmd)

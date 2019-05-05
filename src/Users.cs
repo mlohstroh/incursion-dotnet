@@ -119,6 +119,11 @@ namespace jabber
             }
         }
 
+        /// <summary>
+        /// Returns a list of users who have the admin permission
+        /// </summary>
+        /// <returns>A list of admins</returns>
+        /// <see cref="User"/>
         public List<User> GetAdmins()
         {
             List<User> admins = new List<User>();

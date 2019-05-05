@@ -44,12 +44,9 @@ namespace Jabber
             // run the UpdateIncursions method.
             if(m_lastChecked == DateTime.MinValue || m_lastChecked.AddMinutes(5) < DateTime.UtcNow)
             {
-                Console.Beep();
                 await UpdateIncursions();
                 m_lastChecked = DateTime.UtcNow;
-                
             }
-
         }
 
         /// <summary>

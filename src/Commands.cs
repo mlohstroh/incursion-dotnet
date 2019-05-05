@@ -33,6 +33,34 @@ namespace Jabber
 
             // Returns a list of available commands.
             CommandDispatcher.Instance.RegisterCommand("!ihelp", Help);
+
+            CommandDispatcher.Instance.RegisterCommand("!iping", Ping);
+        }
+
+        public static async Task Ping(Command cmd)
+        {
+            var who = cmd.XmppMessage.From;
+
+            string target = cmd.Args.Trim().ToLower();
+            if (target == "all")
+                Broadcast.All(cmd);
+
+            if (target == "fc")
+                Broadcast.ToFcs(cmd);
+
+            if (target == "leadership")
+                Broadcast.ToLeadership(cmd);
+
+            string response = string.Format("Invalid ping target. |  Syntax !iping {{target}} | Available targets: {0} {1} {2}\nNot all targets will be available.", "fc", "leadership", "");
+
+            if (cmd.XmppMessage.IsGroupMessage())
+            {
+                await JabberClient.Instance.SendGroupMessage(who.Bare, response);
+            }
+            else
+            {
+                await JabberClient.Instance.SendMessage(who.Bare, response);
+            }
         }
 
         public static async Task GetInstructions(Command cmd)

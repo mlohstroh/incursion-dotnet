@@ -118,6 +118,24 @@ namespace jabber
                 return string.Format("{0} was not a listed user and could not be removed.", jabber_resource);
             }
         }
+
+        /// <summary>
+        /// Returns a list of users who have the admin permission
+        /// </summary>
+        /// <returns>A list of admins</returns>
+        /// <see cref="User"/>
+        public List<User> GetAdmins()
+        {
+            List<User> admins = new List<User>();
+
+            foreach(KeyValuePair<string, User> u in m_usersList)
+            {
+                if (u.Value.Role == "Admin")
+                    admins.Add(u.Value);
+            }
+
+            return admins;
+        }
     }
 
     internal class User
